@@ -9,7 +9,7 @@ app.use((req, res, next) => {
 
 app.use((req, res, next) => {
     console.log('Another Middleware !');
-    res.send("<h1>Hello From Express </h1>")
+    res.send("<h1>Nomb Thorakk Ullavar </h1><ul><li>Anu</li><li>Faju</li><li>Kuttan</li><li>Bichu</li></ul>")
 });
 const server = http.createServer(app);
 
