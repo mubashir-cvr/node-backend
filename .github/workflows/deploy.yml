@@ -20,6 +20,8 @@ jobs:
           username: ${{ secrets.SERVER_USERNAME }}
           key: ${{ secrets.SERVER_PASSWORD }}
           script: |
-            cd /home/sites/oms/oms
+            cd /var/www/app2/node-backend
             git pull origin main
-            sudo systemctl restart apache2
+            npm install
+            pm2 start app.js
+            sudo systemctl reload nginx
