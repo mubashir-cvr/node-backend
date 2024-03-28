@@ -23,4 +23,5 @@ jobs:
             cd /var/www/app2/node-backend
             git pull origin main
             npm install
+            pm2 restart app.js
             sudo systemctl reload nginx
