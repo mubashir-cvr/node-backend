@@ -35,3 +35,11 @@ app.use(shopRoutes);
 
 app.listen(3000);
 ```
+
+### Serving hrml and file location binding
+
+```
+router.get('/', (req, res, next) => {
+  res.sendFile(path.join(__dirname,'../','views','shop.html'));
+});
+```
