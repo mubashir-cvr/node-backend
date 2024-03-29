@@ -57,10 +57,13 @@ app.use((err, req, res, next) => {
 
 mongoose
   .connect(
-    'mongodb+srv://marjintechonline:mubashirjan24@cluster1.a1ijif0.mongodb.net/myFirstDatabase?retryWrites=true&w=majority&appName=Cluster1'
+    'mongodb://marjintechonline:mubashirjan24@ac-rap9dl6-shard-00-00.a1ijif0.mongodb.net:27017,ac-rap9dl6-shard-00-01.a1ijif0.mongodb.net:27017,ac-rap9dl6-shard-00-02.a1ijif0.mongodb.net:27017/?ssl=true&replicaSet=atlas-14h2xo-shard-0&authSource=admin&retryWrites=true&w=majority&appName=Cluster1'
   )
   .then(result => {
     console.log("Connected")
     app.listen(3000);
   })
-  .catch(err => console.log(err));
+  .catch(err => {
+    console.log(err)
+    console.log("Not Connected")
+  });
