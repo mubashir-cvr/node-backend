@@ -1,0 +1,246 @@
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 1.0.0
+  description: A sample API for demonstration purposes
+
+paths:
+  /v1/auth/signup:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                name:
+                  type: string
+              required:
+                - email
+                - password
+                - name
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: User registered successfully
+
+  /v1/auth/login:
+    post:
+      summary: Log in a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+              required:
+                - email
+                - password
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+                  userId:
+                    type: string
+                    example: 5f3bcb045c3ff7477d7e54fd
+  /v1/feed/posts:
+    get:
+      summary: Get a list of posts
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Post'
+    post:
+      summary: Create a new post
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Post'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+
+  /v1/feed/post/{postId}:
+    get:
+      summary: Get a post by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the post to get
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+    put:
+      summary: Update a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the post to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Post'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+    delete:
+      summary: Delete a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the post to delete
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Post deleted successfully
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: The email of the user
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          description: The password of the user
+          example: password123
+        name:
+          type: string
+          description: The name of the user
+          example: John Doe
+        status:
+          type: string
+          description: The status of the user
+          default: I am new!
+          example: I am new!
+        posts:
+          type: array
+          description: Array of posts created by the user
+          items:
+            type: string
+            format: objectId
+
+    Post:
+      type: object
+      properties:
+        title:
+          type: string
+          description: The title of the post
+          example: Post Title
+        imageUrl:
+          type: string
+          format: uri
+          description: The URL of the image associated with the post
+          example: https://example.com/image.jpg
+        content:
+          type: string
+          description: The content of the post
+          example: Lorem ipsum dolor sit amet
+        creator:
+          type: object
+          properties:
+            userId:
+              type: string
+              description: The ID of the user who created the post
+            username:
+              type: string
+              description: The username of the user who created the post
+      required:
+        - title
+        - imageUrl
+        - content
+        - creator
+      example:
+        title: Post Title
+        imageUrl: https://example.com/image.jpg
+        content: Lorem ipsum dolor sit amet
+        creator:
+          userId: abc123
+          username: john_doe
+
+securitySchemes:
+  BearerAuth:
+    type: http
+    scheme: bearer
+    bearerFormat: JWT
