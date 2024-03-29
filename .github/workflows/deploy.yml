@@ -1,22 +1,17 @@
-name: Node.js Deployment
+name: Deploy to Ubuntu Server
 
 on:
   push:
     branches:
-      - main  # Adjust the branch name as needed
+      - main
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest  # Use the appropriate operating system
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2  # Use the checkout action to fetch your code
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v2  # Use the Node.js setup action to set up Node.js environment
-        with:
-          node-version: '20'  # Specify the Node.js version
+        uses: actions/checkout@v2
 
       - name: Deploy to Ubuntu
         uses: appleboy/ssh-action@master
