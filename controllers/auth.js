@@ -47,7 +47,7 @@ exports.login = (req, res, next) => {
         error.data ={"usermessage":"Invalid User Name or Password"}
 
         error.statusCode = 401;
-        throw error;
+        next(error);
       }
       loadedUser = user;
       return bcrypt.compare(password, user.password);
@@ -133,11 +133,21 @@ exports.updateUser = (req, res, next) => {
 };
 
 
-exports.checkDone = (req, res, next)=>{
-  res
-  .status(200)
-  .json({
+exports.checkAuth = (req, res, next) => {
+  // If execution reaches here, it means authentication was successful
+  // Access userId from req object
+  const userId = req.userId;
+  res.status(200).json({
     message: 'Authenticated.',
-    user_id:req.userId
+    user_id: userId
+  });
+};
+
+// Controller function for handling errors
+exports.handleError = (err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.statusCode || 500).json({
+    error: err.message || 'Internal Server Error',
+    data: err.data, // Include error data in the response
   });
 };

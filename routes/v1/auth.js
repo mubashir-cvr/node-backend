@@ -67,6 +67,7 @@ router.put(
 );
 
 router.post('/login', authController.login);
-router.get('/checkauth', isAuth ,authController.checkDone);
+router.get('/checkauth', isAuth,authController.checkAuth);
+router.use(authController.handleError);
 
 module.exports = router;
