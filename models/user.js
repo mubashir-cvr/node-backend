@@ -4,26 +4,51 @@ const Schema = mongoose.Schema;
 const userSchema = new Schema({
   email: {
     type: String,
-    required: true
+    required: true 
   },
   password: {
     type: String,
-    required: true
+    required: true 
   },
   name: {
     type: String,
-    required: true
+    required: true 
+  },
+  department: {
+    type: String,
+    default: '' 
+  },
+  address: {
+    type: String,
+    default: '' 
+  },
+  phoneNumber: {
+    type: String,
+    default: '' 
   },
   status: {
     type: String,
-    default: 'I am new!'
+    default: 'NEW'
   },
-  posts: [
-    {
-      type: Schema.Types.ObjectId,
-      ref: 'Post'
-    }
-  ]
+  profilePicture: {
+    type: String  
+  },
+  user_type: {
+    type: String,
+    default: 'staff'
+  },
+  as_on_date: {
+    type: Date,
+    default: Date.now
+  },
+  updated_at: {
+    type: Date,
+    default: null
+  },
+  roles: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Role' 
+  }]
 });
 
 module.exports = mongoose.model('User', userSchema);

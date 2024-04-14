@@ -44,6 +44,8 @@ exports.login = (req, res, next) => {
     .then(user => {
       if (!user) {
         const error = new Error('A user with this email could not be found.');
+        error.data ={"usermessage":"Invalid User Name or Password"}
+
         error.statusCode = 401;
         throw error;
       }
@@ -54,7 +56,8 @@ exports.login = (req, res, next) => {
       if (!isEqual) {
         const error = new Error('Wrong password!');
         error.statusCode = 401;
-        throw error;
+        error.data ={"usermessage":"Invalid User Name or Password"}
+        next(error);
       }
       const token = jwt.sign(
         {
@@ -69,7 +72,72 @@ exports.login = (req, res, next) => {
     .catch(err => {
       if (!err.statusCode) {
         err.statusCode = 500;
+        err.data ={"usermessage":"Internal Server Error"}
       }
       next(err);
     });
+};
+
+exports.updateUser = (req, res, next) => {
+  // Check for validation errors
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const error = new Error('Validation failed.');
+    error.statusCode = 422;
+    error.data = errors.array();
+    throw error;
+  }
+
+  // Extract fields from request body
+  const { email, name, password, department, address, phoneNumber, profilePicture, role } = req.body;
+
+  // Find the user by ID
+  User.findById(req.params.userId)
+    .then(user => {
+      if (!user) {
+        const error = new Error('User not found.');
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // Update user fields
+      user.email = email;
+      user.name = name;
+      user.department = department;
+      user.address = address;
+      user.phoneNumber = phoneNumber;
+      user.profilePicture = profilePicture;
+      user.roles = role; // Assuming role is an array of role IDs
+
+      // If password is provided, hash and update password
+      if (password) {
+        return bcrypt.hash(password, 12)
+          .then(hashedPw => {
+            user.password = hashedPw;
+            return user.save();
+          });
+      } else {
+        return user.save();
+      }
+    })
+    .then(result => {
+      res.status(200).json({ message: 'User updated!', user: result });
+    })
+    .catch(err => {
+      // Handle errors
+      if (!err.statusCode) {
+        err.statusCode = 500;
+      }
+      next(err);
+    });
+};
+
+
+exports.checkDone = (req, res, next)=>{
+  res
+  .status(200)
+  .json({
+    message: 'Authenticated.',
+    user_id:req.userId
+  });
 };

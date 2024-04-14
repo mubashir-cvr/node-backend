@@ -5,6 +5,7 @@ module.exports = (req, res, next) => {
   if (!authHeader) {
     const error = new Error('Not authenticated.');
     error.statusCode = 401;
+    error.data ={"usermessage":"Not authenticated."};
     return next(error); // Pass the error to the error handling middleware
   }
   const token = authHeader.split(' ')[1];
@@ -18,6 +19,8 @@ module.exports = (req, res, next) => {
   if (!decodedToken) {
     const error = new Error('Not authenticated.');
     error.statusCode = 401;
+    error.data ={"usermessage":"Not authenticated."};
+
     return next(error); // Pass the error to the error handling middleware
   }
   req.userId = decodedToken.userId;

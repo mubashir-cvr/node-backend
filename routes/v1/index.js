@@ -12,6 +12,8 @@ const feedRoutes = require('./feed');
 // Mount auth and feed routes
 router.use('/auth', authRoutes);
 router.use('/feed', feedRoutes);
+
+
 router.get('', swaggerUi.serve, swaggerUi.setup(openApiSpec));
 
 
