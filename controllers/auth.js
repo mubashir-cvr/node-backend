@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 const { hasPermission } = require("../middleware/hasPermission");
 const { Permission, Role } = require("../models/role");
+const { errorResponse, generateResponse } = require("../Utils/utilities");
 exports.signup = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -44,21 +45,20 @@ exports.login = (req, res, next) => {
   User.findOne({ email: email })
     .then((user) => {
       if (!user) {
-        const error = new Error("A user with this email could not be found.");
-        error.data = { usermessage: "Invalid User Name or Password" };
-
-        error.statusCode = 401;
-        next(error);
+        let response = errorResponse(401, "Invalid User Name or Password", [
+          { email: "A user with this email could not be found." },
+        ]);
+        return next(response);
       }
       loadedUser = user;
       return bcrypt.compare(password, user.password);
     })
     .then((isEqual) => {
       if (!isEqual) {
-        const error = new Error("Wrong password!");
-        error.statusCode = 401;
-        error.data = { usermessage: "Invalid User Name or Password" };
-        next(error);
+        let response = errorResponse(401, "Invalid User Name or Password", [
+          { password: "Wrong password!" },
+        ]);
+        return next(response);
       }
       const token = jwt.sign(
         {
@@ -66,16 +66,19 @@ exports.login = (req, res, next) => {
           userId: loadedUser._id.toString(),
         },
         "somesupersecretsecret",
-        { expiresIn: "1h" }
+        { expiresIn: "24h" }
       );
-      res.status(200).json({ token: token, userId: loadedUser._id.toString() });
+      let responseData = generateResponse(
+        200,
+        "Token Generated",
+        [{ token: token, userId: loadedUser._id.toString() }],
+        {}
+      );
+      res.status(200).json(responseData);
     })
     .catch((err) => {
-      if (!err.statusCode) {
-        err.statusCode = 500;
-        err.data = { usermessage: "Internal Server Error" };
-      }
-      next(err);
+      let response = errorResponse(500, err.message, []);
+      return next(response);
     });
 };
 
@@ -143,10 +146,13 @@ exports.updateUser = (req, res, next) => {
 
 exports.checkAuth = (req, res, next) => {
   const userId = req.userId;
-  res.status(200).json({
-    message: "Authenticated.",
-    user_id: userId,
-  });
+  let responseData = generateResponse(
+    201,
+    "Authenticated.",
+    [{user_id: userId}],
+    {}
+  );
+  res.status(200).json(responseData);
 };
 
 exports.getPermissions = (req, res, next) => {
@@ -163,51 +169,45 @@ exports.getPermissions = (req, res, next) => {
             .skip((currentPage - 1) * perPage)
             .limit(perPage);
         })
-        .then((permisiions) => {
-          res.status(200).json({
-            message: "Fetched permisiions successfully.",
-            data: permisiions,
-            totalItems: totalItems,
-          });
+        .then((permissions) => {
+          let responseData = generateResponse(
+            200,
+            "Fetched permissions successfully.",
+            [permissions],
+            { totalItems: totalItems, nextPage: currentPage + 1 }
+          );
+          res.status(200).json(responseData);
         })
         .catch((err) => {
-          if (!err.statusCode) {
-            err.statusCode = 500;
-          }
-          next(err);
+          let response = errorResponse(500, err.message, []);
+          return next(response);
         });
     } else {
-      console.log(hasPermission)
-      const error = new Error("Insufficient privilege");
-      error.statusCode = 405;
-      error.data = {
-        error: "Insufficient privilege",
-        data: [
-          {
-            type: "permision",
-            msg: "Insufficient privilege.",
-            path: req.userId,
-            location: "body",
-          },
-        ],
-      };
-      next(error);
+      console.log(hasPermission);
+      let responseData = [
+        {
+          type: "permission",
+          msg: "Insufficient privilege",
+          path: "permission",
+          location: "db",
+        },
+      ];
+      let response = errorResponse(405, "Insufficient privilege", responseData);
+      return next(response);
     }
   });
 };
 exports.createPermission = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    const error = new Error("Validation failed.");
-    error.statusCode = 422;
-    error.data = errors.array();
-    return next(error); // Return here to exit the function after sending the validation error
+    let response = errorResponse(422, "Validation Failed", errors.array());
+    return next(response);
   }
 
   hasPermission(req.userId, "createPermission")
     .then((hasPermission) => {
       if (hasPermission) {
-        const { name, description, objectname } = req.body; // Use object destructuring
+        const { name, description, objectname } = req.body;
         const permission = new Permission({
           name,
           description,
@@ -215,36 +215,88 @@ exports.createPermission = (req, res, next) => {
         });
         return permission.save();
       } else {
-        const error = new Error("Insufficient privilege");
-        error.statusCode = 405;
-        error.data = {
-          error: "Insufficient privilege",
-          data: [
-            {
-              type: "permission",
-              msg: "Insufficient privilege.",
-              path: "userId", // Corrected path to match the error data
-              location: "body",
-            },
-          ],
-        };
-        throw error; // Throw the error to trigger the catch block
+        let responseData = [
+          {
+            type: "permission",
+            msg: "Insufficient privilege",
+            path: "permission",
+            location: "db",
+          },
+        ];
+        let response = errorResponse(
+          405,
+          "Insufficient privilege",
+          responseData
+        );
+        return next(response);
       }
     })
     .then((result) => {
-      res.status(201).json({ message: "Permission created!", permission: result });
+      let responseData = generateResponse(
+        201,
+        "Permission Created",
+        [result],
+        {}
+      );
+      res.status(201).json(responseData);
     })
     .catch((error) => {
-      console.error("Error:", error.message);
-      next(error); // Pass the error to the error handling middleware
+      let response = errorResponse(500, error.message, []);
+      return next(response);
     });
+};
+
+exports.deletePermission = (req, res, next) => {
+  const permissionId = req.params.permissionId;
+  hasPermission(req.userId, "allAccess").then((hasPermission) => {
+    if (hasPermission) {
+      Permission.findById(permissionId).then((permission) => {
+        if (
+          permission.name !== "allAccess" &&
+          permission.name !== "adminAccess"
+        ) {
+          Permission.findByIdAndDelete(permissionId)
+            .then((deletedPermission) => {
+              if (!deletedPermission) {
+                let response = errorResponse(404, "Object not Found", []);
+                return next(response);
+              }
+
+              let responseData = generateResponse(
+                200,
+                "Permission deleted successfully",
+                [deletedPermission],
+                {}
+              );
+              res.status(200).json(responseData);
+            })
+            .catch((error) => {
+              let response = errorResponse(500, error.message, []);
+              return next(response);
+            });
+        }
+      });
+    } else {
+      let responseData = [
+        {
+          type: "permission",
+          msg: "Insufficient privilege",
+          path: "permission",
+          location: "db",
+        },
+      ];
+      let response = errorResponse(405, "Insufficient privilege", responseData);
+      return next(response);
+    }
+  });
 };
 
 // Controller function for handling errors
 exports.handleError = (err, req, res, next) => {
   console.error(err.stack);
   res.status(err.statusCode || 500).json({
-    error: err.message || "Internal Server Error",
-    data: err.data, // Include error data in the response
+    statusCode: err.statusCode,
+    message: err.message || "Internal Server Error",
+    data: err.data,
   });
 };

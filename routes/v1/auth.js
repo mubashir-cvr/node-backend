@@ -87,6 +87,7 @@ router.post(
   authController.createPermission
 );
 router.get("/permissions", isAuth, authController.getPermissions);
+router.delete("/permissions/:permissionId", isAuth, authController.deletePermission);
 router.use(authController.handleError);
 
 module.exports = router;

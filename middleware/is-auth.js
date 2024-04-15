@@ -1,27 +1,23 @@
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
+const { errorResponse } = require("../Utils/utilities");
 
 module.exports = (req, res, next) => {
-  const authHeader = req.get('Authorization');
+  const authHeader = req.get("Authorization");
   if (!authHeader) {
-    const error = new Error('Not authenticated.');
-    error.statusCode = 401;
-    error.data ={"usermessage":"Not authenticated."};
-    return next(error); // Pass the error to the error handling middleware
+    let response = errorResponse(401, "Not authenticated.", []);
+    return next(response); // Pass the error to the error handling middleware
   }
-  const token = authHeader.split(' ')[1];
+  const token = authHeader.split(" ")[1];
   let decodedToken;
   try {
-    decodedToken = jwt.verify(token, 'somesupersecretsecret');
+    decodedToken = jwt.verify(token, "somesupersecretsecret");
   } catch (err) {
-    err.statusCode = 500;
-    return next(err); // Pass the error to the error handling middleware
+    let response = errorResponse(500,err.message , []);
+    return next(response); 
   }
   if (!decodedToken) {
-    const error = new Error('Not authenticated.');
-    error.statusCode = 401;
-    error.data ={"usermessage":"Not authenticated."};
-
-    return next(error); // Pass the error to the error handling middleware
+    let response = errorResponse(401, "Not authenticated.", []);
+    return next(response);
   }
   req.userId = decodedToken.userId;
   next();
