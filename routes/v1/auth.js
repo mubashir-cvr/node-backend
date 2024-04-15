@@ -1,5 +1,5 @@
 const express = require("express");
-const { body } = require("express-validator");
+const { body,param } = require("express-validator");
 const isAuth = require("../../middleware/is-auth");
 const User = require("../../models/user");
 const { Permission, Role } = require("../../models/role");
@@ -88,6 +88,42 @@ router.post(
 );
 router.get("/permissions", isAuth, authController.getPermissions);
 router.delete("/permissions/:permissionId", isAuth, authController.deletePermission);
+router.post(
+  "/roles",
+  isAuth,
+  [
+    body("name").trim().not().isEmpty(),
+    body("permissions").isArray(),
+  ],
+  authController.createRole
+);
+router.put(
+  "/roles/:roleId",
+  isAuth,
+  [
+    param("roleId").trim().not().isEmpty(),
+    body("name").trim().not().isEmpty(),
+    body("permissions").isArray(),
+  ],
+  authController.updateRole
+);
+
+router.delete(
+  "/roles/:roleId",
+  isAuth,
+  [
+    param("roleId").trim().not().isEmpty()
+  ],
+  authController.deleteRole
+);
+
+router.get(
+  "/roles",
+  isAuth,
+  authController.getRoles
+);
+
+
 router.use(authController.handleError);
 
 module.exports = router;

@@ -291,6 +291,166 @@ exports.deletePermission = (req, res, next) => {
   });
 };
 
+
+
+exports.createRole = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const response = errorResponse(422, "Validation Failed", errors.array());
+    return next(response);
+  }
+
+  // Check permission before creating a role
+  hasPermission(req.userId, "createRole")
+    .then((hasPermission) => {
+      if (!hasPermission) {
+        const responseData = [{
+          type: "permission",
+          msg: "Insufficient privilege",
+          path: "permission",
+          location: "db",
+        }];
+        const response = errorResponse(405, "Insufficient privilege", responseData);
+        return next(response);
+      }
+
+      const { name, permissions } = req.body;
+      const role = new Role({
+        name,
+        permissions,
+      });
+      return role.save();
+    })
+    .then((result) => {
+      const responseData = generateResponse(201, "Role Created", [result], {});
+      res.status(201).json(responseData);
+    })
+    .catch((error) => {
+      const response = errorResponse(500, error.message, []);
+      return next(response);
+    });
+};
+
+exports.updateRole = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const response = errorResponse(422, "Validation Failed", errors.array());
+    return next(response);
+  }
+
+  const roleId = req.params.roleId;
+  const { name, permissions } = req.body;
+
+  Role.findById(roleId)
+    .then(role => {
+      if (!role) {
+        const response = errorResponse(404, "Role not found", []);
+        return Promise.reject(response);
+      }
+      return role;
+    })
+    .then(role => {
+      // Check permission before updating the role
+      return hasPermission(req.userId, "updateRole")
+        .then(hasPermission => {
+          if (!hasPermission) {
+            const responseData = [{
+              type: "permission",
+              msg: "Insufficient privilege",
+              path: "permission",
+              location: "db",
+            }];
+            const response = errorResponse(405, "Insufficient privilege", responseData);
+            return Promise.reject(response);
+          }
+          role.name = name;
+          role.permissions = permissions;
+          return role.save();
+        });
+    })
+    .then(result => {
+      const responseData = 102(200, "Role Updated", [result], {});
+      res.status(200).json(responseData);
+    })
+    .catch(error => {
+      const response = errorResponse(500, error.message, []);
+      return next(response);
+    });
+};
+
+exports.deleteRole = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const response = errorResponse(422, "Validation Failed", errors.array());
+    return next(response);
+  }
+
+  const roleId = req.params.roleId;
+
+  Role.findById(roleId)
+    .then(role => {
+      if (!role) {
+        const response = errorResponse(404, "Role not found", []);
+        return Promise.reject(response);
+      }
+      // Check permission before deleting the role
+      return hasPermission(req.userId, "deleteRole")
+        .then(hasPermission => {
+          if (!hasPermission) {
+            const responseData = [{
+              type: "permission",
+              msg: "Insufficient privilege",
+              path: "permission",
+              location: "db",
+            }];
+            const response = errorResponse(405, "Insufficient privilege", responseData);
+            return Promise.reject(response);
+          }
+          return Role.findByIdAndDelete(roleId);
+        });
+    })
+    .then(result => {
+      const responseData = generateResponse(200, "Role Deleted", [], {});
+      res.status(200).json(responseData);
+    })
+    .catch(error => {
+      const response = errorResponse(500, error.message, []);
+      return next(response);
+    });
+};
+
+exports.getRoles = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const response = errorResponse(422, "Validation Failed", errors.array());
+    return next(response);
+  }
+
+  // Check permission before listing roles
+  hasPermission(req.userId, "getRoles")
+    .then(hasPermission => {
+      if (!hasPermission) {
+        const responseData = [{
+          type: "permission",
+          msg: "Insufficient privilege",
+          path: "permission",
+          location: "db",
+        }];
+        const response = errorResponse(405, "Insufficient privilege", responseData);
+        return Promise.reject(response);
+      }
+      return Role.find();
+    })
+    .then(roles => {
+      const responseData = generateResponse(200, "Roles Retrieved", roles, {});
+      res.status(200).json(responseData);
+    })
+    .catch(error => {
+      const response = errorResponse(500, error.message, []);
+      return next(response);
+    });
+};
+
 // Controller function for handling errors
 exports.handleError = (err, req, res, next) => {
   console.error(err.stack);
