@@ -45,10 +45,10 @@ const userSchema = new Schema({
     type: Date,
     default: null
   },
-  roles: [{
+  role: {
     type: Schema.Types.ObjectId,
     ref: 'Role' 
-  }]
+  }
 });
 
 module.exports = mongoose.model('User', userSchema);

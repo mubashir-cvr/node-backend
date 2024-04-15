@@ -75,7 +75,7 @@ mongoose
                         email: "superadmin@gmail.com",
                         password: hashedPassword,
                         name: "Super Admin",
-                        roles: [adminRole._id],
+                        role: adminRole._id,
                       });
                       return superadminUser.save();
                     })

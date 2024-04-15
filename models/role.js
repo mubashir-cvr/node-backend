@@ -9,6 +9,9 @@ const permissionSchema = new Schema({
   },
   description: {
     type: String
+  },
+  objectname: {
+    type: String
   }
 });
 

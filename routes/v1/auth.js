@@ -1,24 +1,25 @@
-const express = require('express');
-const { body } = require('express-validator');
-const isAuth = require('../../middleware/is-auth');
-const User = require('../../models/user');
-const authController = require('../../controllers/auth');
-const multer = require('multer');
+const express = require("express");
+const { body } = require("express-validator");
+const isAuth = require("../../middleware/is-auth");
+const User = require("../../models/user");
+const { Permission, Role } = require("../../models/role");
+const authController = require("../../controllers/auth");
+const multer = require("multer");
 
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'profile');
+    cb(null, "profile");
   },
   filename: (req, file, cb) => {
-    cb(null, new Date().toISOString() + '-' + file.originalname);
-  }
+    cb(null, new Date().toISOString() + "-" + file.originalname);
+  },
 });
 
 const fileFilter = (req, file, cb) => {
   if (
-    file.mimetype === 'image/png' ||
-    file.mimetype === 'image/jpg' ||
-    file.mimetype === 'image/jpeg'
+    file.mimetype === "image/png" ||
+    file.mimetype === "image/jpg" ||
+    file.mimetype === "image/jpeg"
   ) {
     cb(null, true);
   } else {
@@ -26,38 +27,35 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const upload = multer({ storage: fileStorage, fileFilter: fileFilter }).single('profilePicture');
+const upload = multer({ storage: fileStorage, fileFilter: fileFilter }).single(
+  "profilePicture"
+);
 
 const router = express.Router();
 
 router.put(
-  '/signup',
+  "/signup",
   [
-    body('email')
+    body("email")
       .isEmail()
-      .withMessage('Please enter a valid email.')
+      .withMessage("Please enter a valid email.")
       .custom((value, { req }) => {
-        return User.findOne({ email: value }).then(userDoc => {
+        return User.findOne({ email: value }).then((userDoc) => {
           if (userDoc) {
-            return Promise.reject('E-Mail address already exists!');
+            return Promise.reject("E-Mail address already exists!");
           }
         });
       })
       .normalizeEmail(),
-    body('password')
-      .trim()
-      .isLength({ min: 5 }),
-    body('name')
-      .trim()
-      .not()
-      .isEmpty()
+    body("password").trim().isLength({ min: 5 }),
+    body("name").trim().not().isEmpty(),
   ],
   (req, res, next) => {
-    upload(req, res, function(err) {
+    upload(req, res, function (err) {
       if (err instanceof multer.MulterError) {
-        return res.status(400).json({ message: 'File upload error.' });
+        return res.status(400).json({ message: "File upload error." });
       } else if (err) {
-        return res.status(500).json({ message: 'Internal server error.' });
+        return res.status(500).json({ message: "Internal server error." });
       }
 
       next();
@@ -66,8 +64,29 @@ router.put(
   authController.signup
 );
 
-router.post('/login', authController.login);
-router.get('/checkauth', isAuth,authController.checkAuth);
+router.post("/login", authController.login);
+router.get("/checkauth", isAuth, authController.checkAuth);
+router.post(
+  "/permissions",
+  isAuth,
+  [
+    body("name")
+      .trim()
+      .not()
+      .isEmpty()
+      .custom((value, { req }) => {
+        return Permission.findOne({ name: value }).then((permDoc) => {
+          if (permDoc) {
+            return Promise.reject("Duplicate Permission");
+          }
+        });
+      }),
+    body("description").trim().not().isEmpty(),
+    body("objectname").trim().not().isEmpty(),
+  ],
+  authController.createPermission
+);
+router.get("/permissions", isAuth, authController.getPermissions);
 router.use(authController.handleError);
 
 module.exports = router;
