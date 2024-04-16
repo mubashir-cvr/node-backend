@@ -12,7 +12,8 @@ const fileStorage = multer.diskStorage({
     cb(null,"images/profiles");
   },
   filename: (req, file, cb) => {
-    cb(null, `${uuidv4()}-${new Date().toISOString()}`);
+    const ext = file.originalname.split('.').pop(); 
+    cb(null, `${uuidv4()}-${new Date().toISOString()}.${ext}`);
   },
 });
 
