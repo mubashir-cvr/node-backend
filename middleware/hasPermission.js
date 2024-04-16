@@ -1,5 +1,6 @@
 const User = require('../models/user');
 const { Role } = require('../models/role');
+const { errorResponse } = require('../Utils/utilities');
 
 const hasPermission = (userId, permissionName) => {
   return User.findById(userId)

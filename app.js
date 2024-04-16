@@ -23,6 +23,7 @@ app.use((req, res, next) => {
   next();
 });
 
+
 app.use("/api", appRoutes);
 
 mongoose
@@ -50,11 +51,11 @@ mongoose
       })
       .then((allAccessPermission) => {
         // Check if admin role exists, if not create it
-        Role.findOne({ name: "admin" })
+        Role.findOne({ name: "superAdmin" })
           .then((role) => {
             if (!role) {
               role = new Role({
-                name: "admin",
+                name: "superAdmin",
                 permissions: [allAccessPermission._id],
               });
               return role.save();

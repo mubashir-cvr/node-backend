@@ -5,13 +5,14 @@ const User = require("../../models/user");
 const { Permission, Role } = require("../../models/role");
 const authController = require("../../controllers/auth");
 const multer = require("multer");
+const { v4: uuidv4 } = require('uuid');
 
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "profile");
+    cb(null,"images/profiles");
   },
   filename: (req, file, cb) => {
-    cb(null, new Date().toISOString() + "-" + file.originalname);
+    cb(null, `${uuidv4()}-${new Date().toISOString()}`);
   },
 });
 
@@ -123,6 +124,56 @@ router.get(
   authController.getRoles
 );
 
+
+
+
+// Route to create a new user
+router.post('/users', 
+  upload, 
+  [
+    body('email').isEmail().normalizeEmail(),
+    body('password').isLength({ min: 6 }),
+    body('name').trim().not().isEmpty(),
+    body('department').trim(),
+    body('address').trim(),
+    body('phoneNumber').isMobilePhone(),
+    body('status').isIn(['NEW', 'ACTIVE', 'INACTIVE']),
+    body('user_type').isIn(['staff', 'admin']),
+    body('profilePicture').optional().isString(), // Assuming profilePicture is optional
+  ],
+  isAuth,authController.createUser
+);
+
+// Route to update an existing user
+router.put('/users/:userId',
+  upload,
+  [
+    param("userId").trim().not().isEmpty(),
+    body('email').optional().isEmail().normalizeEmail(),
+    body('password').optional().isLength({ min: 6 }),
+    body('name').trim().not().isEmpty(),
+    body('department').optional().trim(),
+    body('address').optional().trim(),
+    body('phoneNumber').optional().isMobilePhone(),
+    body('status').optional().isIn(['NEW', 'ACTIVE', 'INACTIVE']),
+    body('user_type').optional().isIn(['staff', 'admin']),
+    body('profilePicture').optional().isString(), // Assuming profilePicture is optional
+  ],
+  isAuth,authController.updateUser
+);
+
+// Route to delete a user
+router.delete('/users/:userId', 
+  [
+    param("userId").trim().not().isEmpty(),
+  ],
+  isAuth,authController.deleteUser
+);
+
+// Route to get all users
+router.get('/users', 
+  isAuth,authController.getUsers
+);
 
 router.use(authController.handleError);
 
