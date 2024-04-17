@@ -496,6 +496,8 @@ exports.createUser = (req, res, next) => {
 
   hasPermission(req.userId, "createUser")
     .then((canCreateUser) => {
+      console.log("Has permisison Start")
+
       if (!canCreateUser) {
         const response = errorResponse(405, "Insufficient privilege", []);
         return res.status(405).json(response);

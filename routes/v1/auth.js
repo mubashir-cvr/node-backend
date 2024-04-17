@@ -129,7 +129,19 @@ router.get(
 
 // Route to create a new user
 router.post('/users', 
-  upload, 
+(req, res, next) => {
+  console.log("Upload Start")
+
+  upload(req, res, function (err) {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ message: "File upload error." });
+    } else if (err) {
+      return res.status(500).json({ message: "Internal server error." });
+    }
+    console.log("Upload End")
+    next();
+  });
+}, 
   [
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 6 }),
