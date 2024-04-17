@@ -7,7 +7,6 @@ const { Permission, Role } = require("./models/role");
 const bcrypt = require('bcrypt');
 const appRoutes = require("./routes/v1/index");
 const app = express();
-const cors = require('cors');
 
 // app.use(bodyParser.urlencoded()); // x-www-form-urlencoded <form>
 app.use(bodyParser.json()); // application/json
@@ -22,9 +21,6 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   next();
 });
-app.use(cors({
-  origin: 'https://marjintech.online'
-}));
 
 app.use("/api", appRoutes);
 
