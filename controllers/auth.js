@@ -1,8 +1,8 @@
 const { validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 const User = require("../models/user");
 const { hasPermission } = require("../middleware/hasPermission");
 const { Permission, Role } = require("../models/role");
@@ -477,10 +477,16 @@ exports.getRoles = (req, res, next) => {
 
 // USER CONTROLLER START
 
-// Create a new user
 exports.createUser = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    if (req.file) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) {
+          console.error("Failed to delete profile picture:", err);
+        }
+      });
+    }
     const response = errorResponse(422, "Validation Failed", errors.array());
     return res.status(422).json(response);
   }
@@ -500,12 +506,14 @@ exports.createUser = (req, res, next) => {
         address,
         phoneNumber,
         status,
-        profilePicture,
         user_type,
         role,
       } = req.body;
 
-      const user = new User({
+      // Extract the file path or URL from req.file
+      const profilePicture = req.file ? req.file.path : null;
+      
+      const user = {
         email,
         password,
         name,
@@ -516,16 +524,21 @@ exports.createUser = (req, res, next) => {
         profilePicture,
         user_type,
         role:null,
-      });
+      };
 
-      return user.save();
+      return user
+    }).then((user)=>{
+      bcrypt.hash(user.password, 12).then((hashedPassword)=>{
+        user.password=hashedPassword
+        const newUser = new User(user)
+        return newUser.save()
+      })
     })
     .then((newUser) => {
       const responseData = generateResponse(201, "User Created", newUser, {});
       res.status(201).json(responseData);
     })
     .catch((error) => {
-      // If an error occurs during user creation, delete the profile picture if it exists
       if (req.file) {
         fs.unlink(req.file.path, (err) => {
           if (err) {
@@ -596,7 +609,11 @@ exports.updateUser = (req, res, next) => {
             // Remove the old profile picture from the server
             const oldProfilePicture = user.profilePicture;
             if (oldProfilePicture) {
-              const imagePath = path.join(__dirname, '..', 'images', 'profiles', oldProfilePicture);
+              const imagePath = path.join(
+                __dirname,
+                "..",
+                oldProfilePicture
+              );
               fs.unlink(imagePath, (err) => {
                 if (err) {
                   console.error("Error deleting old profile picture:", err);
@@ -652,23 +669,34 @@ exports.deleteUser = (req, res, next) => {
       }
 
       // Delete the user from the database
-      return User.findByIdAndDelete(userId)
-        .then((deletedUser) => {
-          const responseData = generateResponse(200, "User Deleted", deletedUser, {});
-          res.status(200).json(responseData);
+      return User.findByIdAndDelete(userId).then((deletedUser) => {
+        if (deletedUser.profilePicture) {
+          const imagePath = path.join(
+            __dirname,
+            "..",
+            deletedUser.profilePicture
+          );
+          fs.unlink(imagePath, (err) => {
+            if (err) {
+              const response = errorResponse(500, err, []);
+              console.error("Error deleting profile picture:", err);
+              
+              return next(response);
+            } else {
+              console.log("Profile picture deleted successfully");
+            }
+          });
+        }
+        const responseData = generateResponse(
+          200,
+          "User Deleted",
+          deletedUser,
+          {}
+        );
+        res.status(200).json(responseData);
 
-          // Remove the profile picture file from the server
-          if (deletedUser.profilePicture) {
-            const imagePath = path.join(__dirname, '..', 'images', 'profiles', deletedUser.profilePicture);
-            fs.unlink(imagePath, (err) => {
-              if (err) {
-                console.error("Error deleting profile picture:", err);
-              } else {
-                console.log("Profile picture deleted successfully");
-              }
-            });
-          }
-        });
+        // Remove the profile picture file from the server
+      });
     })
     .catch((error) => {
       const response = errorResponse(500, error.message, []);
@@ -685,7 +713,7 @@ exports.getUsers = (req, res, next) => {
         return res.status(405).json(response);
       }
 
-      return User.find();
+      return User.find().populate('role');
     })
     .then((users) => {
       const responseData = generateResponse(200, "Users Retrieved", users, {});

@@ -10,9 +10,8 @@ const app = express();
 
 // app.use(bodyParser.urlencoded()); // x-www-form-urlencoded <form>
 app.use(bodyParser.json()); // application/json
-
 app.use("/images", express.static(path.join(__dirname, "images")));
-
+app.use('/api/images/profiles', express.static(path.join(__dirname, 'images/profiles/')));
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
