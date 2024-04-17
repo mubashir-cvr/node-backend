@@ -478,8 +478,11 @@ exports.getRoles = (req, res, next) => {
 // USER CONTROLLER START
 
 exports.createUser = (req, res, next) => {
+  console.log("Create User Controller ")
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.log("Validation error ")
+    console.log(errors.array())
     if (req.file) {
       fs.unlink(req.file.path, (err) => {
         if (err) {

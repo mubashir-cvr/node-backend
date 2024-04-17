@@ -9,7 +9,7 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../../images/profiles"));
+    cb(null,"images/profiles");
   },
   filename: (req, file, cb) => {
     const ext = file.originalname.split('.').pop(); 
