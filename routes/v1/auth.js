@@ -6,17 +6,16 @@ const { Permission, Role } = require("../../models/role");
 const authController = require("../../controllers/auth");
 const multer = require("multer");
 const { v4: uuidv4 } = require('uuid');
-
+const path = require('path');
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null,"images/profiles");
+    cb(null, path.join(__dirname, "../../images/profiles"));
   },
   filename: (req, file, cb) => {
     const ext = file.originalname.split('.').pop(); 
     cb(null, `${uuidv4()}-${new Date().toISOString()}.${ext}`);
   },
 });
-
 const fileFilter = (req, file, cb) => {
   if (
     file.mimetype === "image/png" ||
