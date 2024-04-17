@@ -13,7 +13,7 @@ app.use(bodyParser.json()); // application/json
 app.use("/images", express.static(path.join(__dirname, "images")));
 app.use('/api/images/profiles', express.static(path.join(__dirname, 'images/profiles/')));
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "http://localhost:5173");
+  res.setHeader("Access-Control-Allow-Origin", "https://marjintech.online");
   res.setHeader(
     "Access-Control-Allow-Methods",
     "OPTIONS, GET, POST, PUT, PATCH, DELETE"
