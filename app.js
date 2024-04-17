@@ -7,13 +7,14 @@ const { Permission, Role } = require("./models/role");
 const bcrypt = require('bcrypt');
 const appRoutes = require("./routes/v1/index");
 const app = express();
-
+require('dotenv').config();
 // app.use(bodyParser.urlencoded()); // x-www-form-urlencoded <form>
 app.use(bodyParser.json()); // application/json
 app.use(express.static(path.join(__dirname,"images")))
+
 app.use('/api/images/profiles', express.static(path.join(__dirname, 'images/profiles/')));
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "https://marjintech.online");
+  res.setHeader("Access-Control-Allow-Origin", process.env.ALLOWED_HOST);
   res.setHeader(
     "Access-Control-Allow-Methods",
     "OPTIONS, GET, POST, PUT, PATCH, DELETE"
@@ -21,12 +22,11 @@ app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   next();
 });
-
 app.use("/api", appRoutes);
 
 mongoose
   .connect(
-    "mongodb://marjintechonline:mubashirjan24@ac-rap9dl6-shard-00-00.a1ijif0.mongodb.net:27017,ac-rap9dl6-shard-00-01.a1ijif0.mongodb.net:27017,ac-rap9dl6-shard-00-02.a1ijif0.mongodb.net:27017/pressMaster?ssl=true&replicaSet=atlas-14h2xo-shard-0&authSource=admin&retryWrites=true&w=majority&appName=Cluster1"
+    process.env.DB_URL
   )
   .then(() => {
     console.log("Connected to MongoDB");
