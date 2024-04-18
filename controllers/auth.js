@@ -236,7 +236,7 @@ exports.createPermission = (req, res, next) => {
       let responseData = generateResponse(
         201,
         "Permission Created",
-        [result],
+        result,
         {}
       );
       res.status(201).json(responseData);
@@ -266,7 +266,7 @@ exports.deletePermission = (req, res, next) => {
               let responseData = generateResponse(
                 200,
                 "Permission deleted successfully",
-                [deletedPermission],
+                deletedPermission,
                 {}
               );
               res.status(200).json(responseData);
@@ -381,9 +381,12 @@ exports.updateRole = (req, res, next) => {
         return role.save();
       });
     })
-    .then((result) => {
-      const responseData = 102(200, "Role Updated", [result], {});
-      res.status(200).json(responseData);
+    .then((role) => {
+      Role.findById(role._id).populate('permissions').then((result)=>{
+        const responseData = generateResponse(200, "Role Updated", result, {});
+        res.status(200).json(responseData);
+      })
+      
     })
     .catch((error) => {
       const response = errorResponse(500, error.message, []);
