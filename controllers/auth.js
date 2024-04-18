@@ -160,7 +160,7 @@ exports.getPermissions = (req, res, next) => {
   const currentPage = req.query.page || 1;
   const perPage = 50;
   let totalItems;
-  hasPermission(req.userId, "readPermission").then((hasPermission) => {
+  hasPermission(req.userId, ["readPermission"]).then((hasPermission) => {
     if (hasPermission) {
       Permission.find()
         .countDocuments()
@@ -205,7 +205,7 @@ exports.createPermission = (req, res, next) => {
     return next(response);
   }
 
-  hasPermission(req.userId, "createPermission")
+  hasPermission(req.userId, ["createPermission"])
     .then((hasPermission) => {
       if (hasPermission) {
         const { name, description, objectname } = req.body;
@@ -249,7 +249,7 @@ exports.createPermission = (req, res, next) => {
 
 exports.deletePermission = (req, res, next) => {
   const permissionId = req.params.permissionId;
-  hasPermission(req.userId, "allAccess").then((hasPermission) => {
+  hasPermission(req.userId, ["allAccess"]).then((hasPermission) => {
     if (hasPermission) {
       Permission.findById(permissionId).then((permission) => {
         if (
@@ -300,7 +300,7 @@ exports.createRole = (req, res, next) => {
   }
 
   // Check permission before creating a role
-  hasPermission(req.userId, "createRole")
+  hasPermission(req.userId, ["createRole"])
     .then((hasPermission) => {
       if (!hasPermission) {
         const responseData = [
@@ -357,7 +357,7 @@ exports.updateRole = (req, res, next) => {
       return role;
     })
     .then(role => {
-      return hasPermission(req.userId, "updateRole").then(hasPermission => {
+      return hasPermission(req.userId, ["updateRole"]).then(hasPermission => {
         if (!hasPermission) {
           const responseData = [{
             type: "permission",
@@ -405,7 +405,7 @@ exports.deleteRole = (req, res, next) => {
         return Promise.reject(response);
       }
       // Check permission before deleting the role
-      return hasPermission(req.userId, "deleteRole").then((hasPermission) => {
+      return hasPermission(req.userId, ["deleteRole"]).then((hasPermission) => {
         if (!hasPermission) {
           const responseData = [
             {
@@ -443,7 +443,7 @@ exports.getRoles = (req, res, next) => {
   }
 
   // Check permission before listing roles
-  hasPermission(req.userId, "getRoles")
+  hasPermission(req.userId, ["getRoles"])
     .then((hasPermission) => {
       if (!hasPermission) {
         const responseData = [
@@ -492,7 +492,7 @@ exports.createUser = (req, res, next) => {
     return res.status(422).json(response);
   }
 
-  hasPermission(req.userId, "createUser")
+  hasPermission(req.userId, ["createUser"])
     .then((canCreateUser) => {
       console.log("Has permisison Start")
 
@@ -576,7 +576,7 @@ exports.updateUser = (req, res, next) => {
     role,
   } = req.body;
 
-  hasPermission(req.userId, "updateUser")
+  hasPermission(req.userId, ["updateUser"])
     .then((canUpdateUser) => {
       if (!canUpdateUser) {
         const response = errorResponse(405, "Insufficient privilege", []);
@@ -655,7 +655,7 @@ exports.updateUser = (req, res, next) => {
 exports.deleteUser = (req, res, next) => {
   const userId = req.params.userId;
 
-  hasPermission(req.userId, "deleteUser")
+  hasPermission(req.userId, ["deleteUser"])
     .then((canDeleteUser) => {
       if (!canDeleteUser) {
         const response = errorResponse(405, "Insufficient privilege", []);
@@ -709,7 +709,7 @@ exports.deleteUser = (req, res, next) => {
 
 // Get all users
 exports.getUsers = (req, res, next) => {
-  hasPermission(req.userId, "getUsers")
+  hasPermission(req.userId, ["getUsers"])
     .then((canGetUsers) => {
       if (!canGetUsers) {
         const response = errorResponse(405, "Insufficient privilege", []);

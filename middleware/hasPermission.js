@@ -2,7 +2,7 @@ const User = require('../models/user');
 const { Role } = require('../models/role');
 const { errorResponse } = require('../Utils/utilities');
 
-const hasPermission = (userId, permissionName) => {
+const hasPermission = (userId, permissionNames) => {
   return User.findById(userId)
     .populate('role')
     .then(user => {
@@ -13,8 +13,15 @@ const hasPermission = (userId, permissionName) => {
       return Role.findById(user.role._id).populate('permissions');
     })
     .then(role => {
-      const hasPermission = role.permissions.some(permission => permissionName === permission.name || 'allAccess' === permission.name);
-      return hasPermission;
+      const hasAllAccess = role.permissions.some(permission => permission.name === 'allAccess');
+      if (hasAllAccess) {
+        return true; // Grant permission if user has 'allAccess'
+      }
+
+      const hasPermissions = permissionNames.some(permissionName =>
+        role.permissions.some(permission => permission.name === permissionName)
+      );
+      return hasPermissions;
     })
     .catch(error => {
       console.error('Error checking permission:', error.message);
