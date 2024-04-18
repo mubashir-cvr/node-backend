@@ -338,7 +338,6 @@ exports.createRole = (req, res, next) => {
       return next(response);
     });
 };
-
 exports.updateRole = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -350,45 +349,41 @@ exports.updateRole = (req, res, next) => {
   const { name, permissions } = req.body;
 
   Role.findById(roleId)
-    .then((role) => {
+    .then(role => {
       if (!role) {
         const response = errorResponse(404, "Role not found", []);
         return Promise.reject(response);
       }
       return role;
     })
-    .then((role) => {
-      // Check permission before updating the role
-      return hasPermission(req.userId, "updateRole").then((hasPermission) => {
+    .then(role => {
+      return hasPermission(req.userId, "updateRole").then(hasPermission => {
         if (!hasPermission) {
-          const responseData = [
-            {
-              type: "permission",
-              msg: "Insufficient privilege",
-              path: "permission",
-              location: "db",
-            },
-          ];
-          const response = errorResponse(
-            405,
-            "Insufficient privilege",
-            responseData
-          );
+          const responseData = [{
+            type: "permission",
+            msg: "Insufficient privilege",
+            path: "permission",
+            location: "db",
+          }];
+          const response = errorResponse(405, "Insufficient privilege", responseData);
           return Promise.reject(response);
         }
-        role.name = name;
-        role.permissions = permissions;
-        return role.save();
+        return role;
       });
     })
-    .then((role) => {
-      Role.findById(role._id).populate('permissions').then((result)=>{
-        const responseData = generateResponse(200, "Role Updated", result, {});
-        res.status(200).json(responseData);
-      })
-      
+    .then(role => {
+      role.name = name;
+      role.permissions = permissions;
+      return role.save();
     })
-    .catch((error) => {
+    .then(role => {
+      return Role.findById(role._id).populate('permissions');
+    })
+    .then(updatedRole => {
+      const responseData = generateResponse(200, "Role Updated", updatedRole, {});
+      res.status(200).json(responseData);
+    })
+    .catch(error => {
       const response = errorResponse(500, error.message, []);
       return next(response);
     });
