@@ -83,68 +83,6 @@ exports.login = (req, res, next) => {
     });
 };
 
-exports.updateUser = (req, res, next) => {
-  // Check for validation errors
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    const error = new Error("Validation failed.");
-    error.statusCode = 422;
-    error.data = errors.array();
-    throw error;
-  }
-
-  // Extract fields from request body
-  const {
-    email,
-    name,
-    password,
-    department,
-    address,
-    phoneNumber,
-    profilePicture,
-    role,
-  } = req.body;
-
-  // Find the user by ID
-  User.findById(req.params.userId)
-    .then((user) => {
-      if (!user) {
-        const error = new Error("User not found.");
-        error.statusCode = 404;
-        throw error;
-      }
-
-      // Update user fields
-      user.email = email;
-      user.name = name;
-      user.department = department;
-      user.address = address;
-      user.phoneNumber = phoneNumber;
-      user.profilePicture = profilePicture;
-      user.roles = role; // Assuming role is an array of role IDs
-
-      // If password is provided, hash and update password
-      if (password) {
-        return bcrypt.hash(password, 12).then((hashedPw) => {
-          user.password = hashedPw;
-          return user.save();
-        });
-      } else {
-        return user.save();
-      }
-    })
-    .then((result) => {
-      res.status(200).json({ message: "User updated!", user: result });
-    })
-    .catch((err) => {
-      // Handle errors
-      if (!err.statusCode) {
-        err.statusCode = 500;
-      }
-      next(err);
-    });
-};
-
 exports.checkAuth = (req, res, next) => {
   const userId = req.userId;
   let responseData = generateResponse(
@@ -184,7 +122,6 @@ exports.getPermissions = (req, res, next) => {
           return next(response);
         });
     } else {
-      console.log(hasPermission);
       let responseData = [
         {
           type: "permission",
@@ -349,41 +286,52 @@ exports.updateRole = (req, res, next) => {
   const { name, permissions } = req.body;
 
   Role.findById(roleId)
-    .then(role => {
+    .then((role) => {
       if (!role) {
         const response = errorResponse(404, "Role not found", []);
         return Promise.reject(response);
       }
       return role;
     })
-    .then(role => {
-      return hasPermission(req.userId, ["updateRole"]).then(hasPermission => {
+    .then((role) => {
+      return hasPermission(req.userId, ["updateRole"]).then((hasPermission) => {
         if (!hasPermission) {
-          const responseData = [{
-            type: "permission",
-            msg: "Insufficient privilege",
-            path: "permission",
-            location: "db",
-          }];
-          const response = errorResponse(405, "Insufficient privilege", responseData);
+          const responseData = [
+            {
+              type: "permission",
+              msg: "Insufficient privilege",
+              path: "permission",
+              location: "db",
+            },
+          ];
+          const response = errorResponse(
+            405,
+            "Insufficient privilege",
+            responseData
+          );
           return Promise.reject(response);
         }
         return role;
       });
     })
-    .then(role => {
+    .then((role) => {
       role.name = name;
       role.permissions = permissions;
       return role.save();
     })
-    .then(role => {
-      return Role.findById(role._id).populate('permissions');
+    .then((role) => {
+      return Role.findById(role._id).populate("permissions");
     })
-    .then(updatedRole => {
-      const responseData = generateResponse(200, "Role Updated", updatedRole, {});
+    .then((updatedRole) => {
+      const responseData = generateResponse(
+        200,
+        "Role Updated",
+        updatedRole,
+        {}
+      );
       res.status(200).json(responseData);
     })
-    .catch(error => {
+    .catch((error) => {
       const response = errorResponse(500, error.message, []);
       return next(response);
     });
@@ -474,13 +422,9 @@ exports.getRoles = (req, res, next) => {
 };
 
 // USER CONTROLLER START
-
 exports.createUser = (req, res, next) => {
-  console.log("Create User Controller ")
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.log("Validation error ")
-    console.log(errors.array())
     if (req.file) {
       fs.unlink(req.file.path, (err) => {
         if (err) {
@@ -494,11 +438,10 @@ exports.createUser = (req, res, next) => {
 
   hasPermission(req.userId, ["createUser"])
     .then((canCreateUser) => {
-      console.log("Has permisison Start")
 
       if (!canCreateUser) {
         const response = errorResponse(405, "Insufficient privilege", []);
-        return res.status(405).json(response);
+        throw response;
       }
 
       const {
@@ -515,31 +458,35 @@ exports.createUser = (req, res, next) => {
 
       // Extract the file path or URL from req.file
       const profilePicture = req.file ? req.file.path : null;
-      
-      const user = {
-        email,
-        password,
-        name,
-        department,
-        address,
-        phoneNumber,
-        status,
-        profilePicture,
-        user_type,
-        role:null,
-      };
 
-      return user
-    }).then((user)=>{
-      bcrypt.hash(user.password, 12).then((hashedPassword)=>{
-        user.password=hashedPassword
-        const newUser = new User(user)
-        return newUser.save()
-      })
+      return bcrypt.hash(password, 12).then((hashedPassword) => {
+        const user = new User({
+          email,
+          password: hashedPassword,
+          name,
+          department,
+          address,
+          phoneNumber,
+          status,
+          profilePicture,
+          user_type,
+          role,
+        });
+        return user.save();
+      });
     })
     .then((newUser) => {
-      const responseData = generateResponse(201, "User Created", newUser, {});
-      res.status(201).json(responseData);
+      User.findById(newUser._id)
+        .populate("role")
+        .then((createdUser) => {
+          const responseData = generateResponse(
+            201,
+            "User Created",
+            createdUser,
+            {}
+          );
+          res.status(201).json(responseData);
+        });
     })
     .catch((error) => {
       if (req.file) {
@@ -571,7 +518,6 @@ exports.updateUser = (req, res, next) => {
     address,
     phoneNumber,
     status,
-    profilePicture,
     user_type,
     role,
   } = req.body;
@@ -601,7 +547,7 @@ exports.updateUser = (req, res, next) => {
             address,
             phoneNumber,
             status,
-            profilePicture: req.file ? req.file.filename : profilePicture, // Use the new filename if a new picture is uploaded
+            profilePicture: user.profilePicture, // Use the new filename if a new picture is uploaded
             user_type,
             role,
           },
@@ -612,11 +558,7 @@ exports.updateUser = (req, res, next) => {
             // Remove the old profile picture from the server
             const oldProfilePicture = user.profilePicture;
             if (oldProfilePicture) {
-              const imagePath = path.join(
-                __dirname,
-                "..",
-                oldProfilePicture
-              );
+              const imagePath = path.join(__dirname, "..", oldProfilePicture);
               fs.unlink(imagePath, (err) => {
                 if (err) {
                   console.error("Error deleting old profile picture:", err);
@@ -631,19 +573,22 @@ exports.updateUser = (req, res, next) => {
         });
       });
     })
-    .then((updatedUser) => {
-      if (!updatedUser) {
+    .then((user) => {
+      if (!user) {
         const response = errorResponse(404, "User not found", []);
         return res.status(404).json(response);
       }
-
-      const responseData = generateResponse(
-        200,
-        "User Updated",
-        updatedUser,
-        {}
-      );
-      res.status(200).json(responseData);
+      User.findById(user._id)
+        .populate("role")
+        .then((updatedUser) => {
+          const responseData = generateResponse(
+            200,
+            "User Updated",
+            updatedUser,
+            {}
+          );
+          res.status(200).json(responseData);
+        });
     })
     .catch((error) => {
       const response = errorResponse(500, error.message, []);
@@ -683,7 +628,7 @@ exports.deleteUser = (req, res, next) => {
             if (err) {
               const response = errorResponse(500, err, []);
               console.error("Error deleting profile picture:", err);
-              
+
               return next(response);
             } else {
               console.log("Profile picture deleted successfully");
@@ -716,7 +661,7 @@ exports.getUsers = (req, res, next) => {
         return res.status(405).json(response);
       }
 
-      return User.find().populate('role');
+      return User.find().populate("role");
     })
     .then((users) => {
       const responseData = generateResponse(200, "Users Retrieved", users, {});

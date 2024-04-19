@@ -128,7 +128,7 @@ router.get(
 
 
 // Route to create a new user
-router.post('/users', 
+router.post('/users',isAuth, 
 (req, res, next) => {
   upload(req, res, function (err) {
     if (err instanceof multer.MulterError) {
@@ -143,18 +143,18 @@ router.post('/users',
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 6 }),
     body('name').trim().not().isEmpty(),
-    body('department').trim(),
-    body('address').trim(),
+    body('department').optional().trim(),
+    body('address').optional().trim(),
     body('phoneNumber').isMobilePhone(),
-    body('status').isIn(['NEW', 'ACTIVE', 'INACTIVE']),
-    body('user_type').isIn(['staff', 'admin']),
+    body('status').optional().isString(),
+    body('user_type').isIn(['STAFF', 'ADMIN','MANAGEMENT']),
     body('profilePicture').optional().isString(), // Assuming profilePicture is optional
   ],
   isAuth,authController.createUser
 );
 
 // Route to update an existing user
-router.put('/users/:userId',
+router.put('/users/:userId',isAuth,
   upload,
   [
     param("userId").trim().not().isEmpty(),
@@ -165,7 +165,7 @@ router.put('/users/:userId',
     body('address').optional().trim(),
     body('phoneNumber').optional().isMobilePhone(),
     body('status').optional().isIn(['NEW', 'ACTIVE', 'INACTIVE']),
-    body('user_type').optional().isIn(['staff', 'admin']),
+    body('user_type').optional().isIn(['STAFF', 'ADMIN']),
     body('profilePicture').optional().isString(), // Assuming profilePicture is optional
   ],
   isAuth,authController.updateUser
