@@ -85,13 +85,18 @@ exports.login = (req, res, next) => {
 
 exports.checkAuth = (req, res, next) => {
   const userId = req.userId;
-  let responseData = generateResponse(
-    201,
-    "Authenticated.",
-    [{ user_id: userId }],
-    {}
-  );
-  res.status(200).json(responseData);
+  User.findById(userId).then((user=>{
+    let responseData = generateResponse(
+      201,
+      "Authenticated.",
+      { user: user },
+      {}
+    );
+    delete responseData.data.user.password
+    res.status(200).json(responseData);
+
+  }))
+  
 };
 
 exports.getPermissions = (req, res, next) => {
@@ -660,7 +665,17 @@ exports.getUsers = (req, res, next) => {
         const response = errorResponse(405, "Insufficient privilege", []);
         return res.status(405).json(response);
       }
-
+      const { search } = req.query;
+      if(search){
+        return User.find({
+          $or: [
+            { name: { $regex: new RegExp(search, "i") } },
+            { phoneNumber: { $regex: new RegExp(search, "i") } },
+            { email: { $regex: new RegExp(search, "i") } }
+          ]
+        }).populate("role");
+      }
+      
       return User.find().populate("role");
     })
     .then((users) => {
