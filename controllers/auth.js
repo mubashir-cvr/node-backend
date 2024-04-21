@@ -678,7 +678,8 @@ exports.getUsers = (req, res, next) => {
       return User.find().populate("role");
     })
     .then((users) => {
-      const responseData = generateResponse(200, "Users Retrieved", users, {});
+      const filtereduser = users.filter(user=>user.email!=='superadmin@gmail.com')
+      const responseData = generateResponse(200, "Users Retrieved", filtereduser, {});
       res.status(200).json(responseData);
     })
     .catch((error) => {
