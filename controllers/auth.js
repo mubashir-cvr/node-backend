@@ -417,7 +417,8 @@ exports.getRoles = (req, res, next) => {
       return Role.find().populate("permissions");
     })
     .then((roles) => {
-      const responseData = generateResponse(200, "Roles Retrieved", roles, {});
+      const filteredRoles = roles.filter(role => role.name !== "superAdmin");
+      const responseData = generateResponse(200, "Roles Retrieved", filteredRoles, {});
       res.status(200).json(responseData);
     })
     .catch((error) => {
