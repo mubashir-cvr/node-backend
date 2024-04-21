@@ -92,7 +92,7 @@ exports.checkAuth = (req, res, next) => {
       { user: user },
       {}
     );
-    delete responseData.data.user.password
+    // delete responseData.data.user.password
     res.status(200).json(responseData);
 
   }))
@@ -607,59 +607,51 @@ exports.updateUser = (req, res, next) => {
     });
 };
 
-// Delete an existing user
+// Delete an existing user// Delete an existing user
 exports.deleteUser = (req, res, next) => {
   const userId = req.params.userId;
-
-  hasPermission(req.userId, ["deleteUser"])
-    .then((canDeleteUser) => {
-      if (!canDeleteUser) {
-        const response = errorResponse(405, "Insufficient privilege", []);
-        return res.status(405).json(response);
-      }
-
-      // Find the user by ID to get the profile picture filename
-      return User.findById(userId);
-    })
+  User.findById(userId)
     .then((user) => {
       if (!user) {
         const response = errorResponse(404, "User not found", []);
         return res.status(404).json(response);
       }
 
-      // Delete the user from the database
-      return User.findByIdAndDelete(userId).then((deletedUser) => {
-        if (deletedUser.profilePicture) {
-          const imagePath = path.join(
-            __dirname,
-            "..",
-            deletedUser.profilePicture
-          );
-          fs.unlink(imagePath, (err) => {
-            if (err) {
-              const response = errorResponse(500, err, []);
-              console.error("Error deleting profile picture:", err);
+      // Check if user is superadmin or trying to delete themselves
+      if (user.email === 'superadmin@gmail.com' || req.userId === userId) {
+        const error = errorResponse(405, "Not Allowed to delete", {});
+        return Promise.reject(error); // Reject the promise to skip further execution
+      }
 
-              return next(response);
-            } else {
-              console.log("Profile picture deleted successfully");
+      // Check permission to delete user
+      return hasPermission(req.userId, ["deleteUser"])
+        .then((canDeleteUser) => {
+          if (!canDeleteUser) {
+            const response = errorResponse(405, "Insufficient privilege", []);
+            return res.status(405).json(response);
+          }
+
+          // Delete the user from the database
+          return User.findByIdAndDelete(userId).then((deletedUser) => {
+            if (deletedUser.profilePicture) {
+              const imagePath = path.join(__dirname, "..", deletedUser.profilePicture);
+              fs.unlink(imagePath, (err) => {
+                if (err) {
+                  const response = errorResponse(500, err, []);
+                  console.error("Error deleting profile picture:", err);
+                  return next(response);
+                } else {
+                  console.log("Profile picture deleted successfully");
+                }
+              });
             }
+            const responseData = generateResponse(200, "User Deleted", deletedUser, {});
+            res.status(200).json(responseData);
           });
-        }
-        const responseData = generateResponse(
-          200,
-          "User Deleted",
-          deletedUser,
-          {}
-        );
-        res.status(200).json(responseData);
-
-        // Remove the profile picture file from the server
-      });
+        });
     })
     .catch((error) => {
-      const response = errorResponse(500, error.message, []);
-      next(response);
+      next(error); // Pass the error to the error handling middleware
     });
 };
 
