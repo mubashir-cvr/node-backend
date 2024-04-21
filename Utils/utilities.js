@@ -1,6 +1,6 @@
 /**
  * Process a list (array) of numbers.
- * @param {Object[]} data 
+ * @param {Object} data 
  * @param {number} statusCode 
  * @param {string} userMessage 
  */
@@ -13,7 +13,7 @@ const errorResponse=(statusCode,userMessage,data)=>{
 
 /**
  * Process a list (array) of numbers.
- * @param {Object[]} data 
+ * @param {Object} data 
  * @param {number} statusCode 
  * @param {string} userMessage 
  * @param {object} extra 

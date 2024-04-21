@@ -34,36 +34,36 @@ const upload = multer({ storage: fileStorage, fileFilter: fileFilter }).single(
 
 const router = express.Router();
 
-router.put(
-  "/signup",
-  [
-    body("email")
-      .isEmail()
-      .withMessage("Please enter a valid email.")
-      .custom((value, { req }) => {
-        return User.findOne({ email: value }).then((userDoc) => {
-          if (userDoc) {
-            return Promise.reject("E-Mail address already exists!");
-          }
-        });
-      })
-      .normalizeEmail(),
-    body("password").trim().isLength({ min: 5 }),
-    body("name").trim().not().isEmpty(),
-  ],
-  (req, res, next) => {
-    upload(req, res, function (err) {
-      if (err instanceof multer.MulterError) {
-        return res.status(400).json({ message: "File upload error." });
-      } else if (err) {
-        return res.status(500).json({ message: "Internal server error." });
-      }
+// router.put(
+//   "/signup",
+//   [
+//     body("email")
+//       .isEmail()
+//       .withMessage("Please enter a valid email.")
+//       .custom((value, { req }) => {
+//         return User.findOne({ email: value }).then((userDoc) => {
+//           if (userDoc) {
+//             return Promise.reject("E-Mail address already exists!");
+//           }
+//         });
+//       })
+//       .normalizeEmail(),
+//     body("password").trim().isLength({ min: 5 }),
+//     body("name").trim().not().isEmpty(),
+//   ],
+//   (req, res, next) => {
+//     upload(req, res, function (err) {
+//       if (err instanceof multer.MulterError) {
+//         return res.status(400).json({ message: "File upload error." });
+//       } else if (err) {
+//         return res.status(500).json({ message: "Internal server error." });
+//       }
 
-      next();
-    });
-  },
-  authController.signup
-);
+//       next();
+//     });
+//   },
+//   authController.signup
+// );
 
 router.post("/login", authController.login);
 router.get("/checkauth", isAuth, authController.checkAuth);
@@ -222,6 +222,22 @@ router.put(
   ],
   isAuth,
   authController.updateUser
+);
+
+router.put(
+  "/reset-password",
+  isAuth,
+  [
+    body("oldPassword").trim().notEmpty(),
+    body("newPassword").trim().isLength({ min: 6 }),
+    body("rePassword").custom((value, { req }) => {
+      if (value !== req.body.newPassword) {
+        throw new Error("Passwords do not match");
+      }
+      return true;
+    }),
+  ],
+  authController.resetPassword
 );
 
 // Route to delete a user

@@ -541,28 +541,34 @@ exports.updateUser = (req, res, next) => {
           return res.status(404).json(response);
         }
 
+        // Construct the update object without password
+        let updateObject = {
+          email,
+          name,
+          department,
+          address,
+          phoneNumber,
+          status,
+          user_type,
+          role,
+        };
+
+        
+        // If a new profile picture is uploaded, update the profilePicture field
+        if (req.file) {
+          updateObject.profilePicture = req.file.path; // Assuming req.file.path contains the path to the uploaded image
+        } else {
+          // Use the existing profile picture if no new picture is uploaded
+          updateObject.profilePicture = user.profilePicture;
+        }
+
         // Update the user with the new data
-        return User.findByIdAndUpdate(
-          userId,
-          {
-            email,
-            password,
-            name,
-            department,
-            address,
-            phoneNumber,
-            status,
-            profilePicture: user.profilePicture, // Use the new filename if a new picture is uploaded
-            user_type,
-            role,
-          },
-          { new: true }
-        ).then((updatedUser) => {
-          // If a new profile picture is provided and the user update is successful
-          if (req.file && updatedUser) {
-            // Remove the old profile picture from the server
-            const oldProfilePicture = user.profilePicture;
-            if (oldProfilePicture) {
+        return User.findByIdAndUpdate(userId, updateObject, { new: true }).then(
+          (updatedUser) => {
+            // If a new profile picture is provided and the user update is successful
+            if (req.file && updatedUser && user.profilePicture) {
+              // Remove the old profile picture from the server
+              const oldProfilePicture = user.profilePicture;
               const imagePath = path.join(__dirname, "..", oldProfilePicture);
               fs.unlink(imagePath, (err) => {
                 if (err) {
@@ -572,10 +578,10 @@ exports.updateUser = (req, res, next) => {
                 }
               });
             }
-          }
 
-          return updatedUser;
-        });
+            return updatedUser;
+          }
+        );
       });
     })
     .then((user) => {
@@ -688,6 +694,44 @@ exports.getUsers = (req, res, next) => {
     });
 };
 
+
+exports.resetPassword = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    const response = errorResponse(422, "Validation Failed", errors.array());
+    return next(response);
+  }
+
+  const userId = req.userId;
+  const { oldPassword, newPassword } = req.body;
+
+  User.findById(userId)
+    .then((user) => {
+      if (!user) {
+        const response = errorResponse(404, "User not found", []);
+        return Promise.reject(response);
+      }
+      return bcrypt.compare(oldPassword, user.password);
+    })
+    .then((isMatch) => {
+      if (!isMatch) {
+        const response = errorResponse(401, "Invalid old password", []);
+        return Promise.reject(response);
+      }
+      return bcrypt.hash(newPassword, 12);
+    })
+    .then((hashedPassword) => {
+      return User.findByIdAndUpdate(userId, { password: hashedPassword });
+    })
+    .then(() => {
+      const responseData = generateResponse(200, "Password reset successful", {}, {});
+      res.status(200).json(responseData);
+    })
+    .catch((error) => {
+      const response = errorResponse(500, error.message, []);
+      return next(response);
+    });
+};
 // USER CONTROLLER END
 
 // Controller function for handling errors
