@@ -85,18 +85,50 @@ exports.login = (req, res, next) => {
 
 exports.checkAuth = (req, res, next) => {
   const userId = req.userId;
-  User.findById(userId).then((user=>{
-    let responseData = generateResponse(
-      201,
-      "Authenticated.",
-      { user: user },
-      {}
-    );
-    // delete responseData.data.user.password
-    res.status(200).json(responseData);
+  User.findById(userId)
+    .populate("role") // Assuming "role" is the field in the User model referencing the Role model
+    .then((user) => {
+      // Check if the user has a role
+      if (!user || !user.role) {
+        throw new Error("User role not found.");
+      }
 
-  }))
-  
+      // Extract permission IDs from the role
+      const permissionIds = user.role.permissions;
+
+      // Fetch the names of permissions based on the IDs
+      Permission.find({ _id: { $in: permissionIds } })
+        .then((permissions) => {
+          const permissionNames = permissions.map(
+            (permission) => permission.name
+          );
+          const permissionObjects = Array.from(
+            new Set(permissions.map((permission) => permission.objectname))
+          );
+
+          const responseData = generateResponse(
+            201,
+            "Authenticated.",
+            {
+              user: user,
+              permissions: {
+                permissions: permissionNames,
+                objects: permissionObjects,
+              },
+            }, // Combine user and permission names in the response
+            {}
+          );
+          res.status(200).json(responseData);
+        })
+        .catch((error) => {
+          throw new Error("Error fetching permissions.");
+        });
+    })
+    .catch((error) => {
+      // Handle errors
+      console.error("Error:", error);
+      res.status(500).json({ message: "Internal Server Error" });
+    });
 };
 
 exports.getPermissions = (req, res, next) => {
@@ -357,9 +389,10 @@ exports.deleteRole = (req, res, next) => {
         const response = errorResponse(404, "Role not found", []);
         return Promise.reject(response);
       }
+
       // Check permission before deleting the role
       return hasPermission(req.userId, ["deleteRole"]).then((hasPermission) => {
-        if (!hasPermission) {
+        if (!hasPermission || role.name==='superAdmin' || role.name==='adminAccess') {
           const responseData = [
             {
               type: "permission",
@@ -417,9 +450,21 @@ exports.getRoles = (req, res, next) => {
       return Role.find().populate("permissions");
     })
     .then((roles) => {
-      const filteredRoles = roles.filter(role => role.name !== "superAdmin");
-      const responseData = generateResponse(200, "Roles Retrieved", filteredRoles, {});
-      res.status(200).json(responseData);
+      User.findById(req.userId).then((user) => {
+        
+        let filteredRoles = roles;
+        if (user.email !== "superadmin@gmail.com") {
+          filteredRoles = roles.filter((role) => role.name !== "superAdmin");
+        }
+        const responseData = generateResponse(
+          200,
+          "Roles Retrieved",
+          filteredRoles,
+          {}
+        );
+        res.status(200).json(responseData);
+      });
+      
     })
     .catch((error) => {
       const response = errorResponse(500, error.message, []);
@@ -444,7 +489,6 @@ exports.createUser = (req, res, next) => {
 
   hasPermission(req.userId, ["createUser"])
     .then((canCreateUser) => {
-
       if (!canCreateUser) {
         const response = errorResponse(405, "Insufficient privilege", []);
         throw response;
@@ -554,7 +598,6 @@ exports.updateUser = (req, res, next) => {
           role,
         };
 
-        
         // If a new profile picture is uploaded, update the profilePicture field
         if (req.file) {
           updateObject.profilePicture = req.file.path; // Assuming req.file.path contains the path to the uploaded image
@@ -619,37 +662,45 @@ exports.deleteUser = (req, res, next) => {
       }
 
       // Check if user is superadmin or trying to delete themselves
-      if (user.email === 'superadmin@gmail.com' || req.userId === userId) {
+      if (user.email === "superadmin@gmail.com" || req.userId === userId) {
         const error = errorResponse(405, "Not Allowed to delete", {});
         return Promise.reject(error); // Reject the promise to skip further execution
       }
 
       // Check permission to delete user
-      return hasPermission(req.userId, ["deleteUser"])
-        .then((canDeleteUser) => {
-          if (!canDeleteUser) {
-            const response = errorResponse(405, "Insufficient privilege", []);
-            return res.status(405).json(response);
-          }
+      return hasPermission(req.userId, ["deleteUser"]).then((canDeleteUser) => {
+        if (!canDeleteUser) {
+          const response = errorResponse(405, "Insufficient privilege", []);
+          return res.status(405).json(response);
+        }
 
-          // Delete the user from the database
-          return User.findByIdAndDelete(userId).then((deletedUser) => {
-            if (deletedUser.profilePicture) {
-              const imagePath = path.join(__dirname, "..", deletedUser.profilePicture);
-              fs.unlink(imagePath, (err) => {
-                if (err) {
-                  const response = errorResponse(500, err, []);
-                  console.error("Error deleting profile picture:", err);
-                  return next(response);
-                } else {
-                  console.log("Profile picture deleted successfully");
-                }
-              });
-            }
-            const responseData = generateResponse(200, "User Deleted", deletedUser, {});
-            res.status(200).json(responseData);
-          });
+        // Delete the user from the database
+        return User.findByIdAndDelete(userId).then((deletedUser) => {
+          if (deletedUser.profilePicture) {
+            const imagePath = path.join(
+              __dirname,
+              "..",
+              deletedUser.profilePicture
+            );
+            fs.unlink(imagePath, (err) => {
+              if (err) {
+                const response = errorResponse(500, err, []);
+                console.error("Error deleting profile picture:", err);
+                return next(response);
+              } else {
+                console.log("Profile picture deleted successfully");
+              }
+            });
+          }
+          const responseData = generateResponse(
+            200,
+            "User Deleted",
+            deletedUser,
+            {}
+          );
+          res.status(200).json(responseData);
         });
+      });
     })
     .catch((error) => {
       next(error); // Pass the error to the error handling middleware
@@ -665,29 +716,40 @@ exports.getUsers = (req, res, next) => {
         return res.status(405).json(response);
       }
       const { search } = req.query;
-      if(search){
+      if (search) {
         return User.find({
           $or: [
             { name: { $regex: new RegExp(search, "i") } },
             { phoneNumber: { $regex: new RegExp(search, "i") } },
-            { email: { $regex: new RegExp(search, "i") } }
-          ]
+            { email: { $regex: new RegExp(search, "i") } },
+          ],
         }).populate("role");
       }
-      
+
       return User.find().populate("role");
     })
     .then((users) => {
-      const filtereduser = users.filter(user=>user.email!=='superadmin@gmail.com')
-      const responseData = generateResponse(200, "Users Retrieved", filtereduser, {});
-      res.status(200).json(responseData);
+      User.findById(req.userId).then((user) => {
+        let filtereduser = users;
+        if (user.email != "superadmin@gmail.com") {
+          filtereduser = users.filter(
+            (user) => user.email !== "superadmin@gmail.com"
+          );
+        }
+        const responseData = generateResponse(
+          200,
+          "Users Retrieved",
+          filtereduser,
+          {}
+        );
+        res.status(200).json(responseData);
+      });
     })
     .catch((error) => {
       const response = errorResponse(500, error.message, []);
       next(response);
     });
 };
-
 
 exports.resetPassword = (req, res, next) => {
   const errors = validationResult(req);
@@ -718,7 +780,12 @@ exports.resetPassword = (req, res, next) => {
       return User.findByIdAndUpdate(userId, { password: hashedPassword });
     })
     .then(() => {
-      const responseData = generateResponse(200, "Password reset successful", {}, {});
+      const responseData = generateResponse(
+        200,
+        "Password reset successful",
+        {},
+        {}
+      );
       res.status(200).json(responseData);
     })
     .catch((error) => {
