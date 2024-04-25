@@ -5,7 +5,7 @@ const { body, param } = require("express-validator");
 const isAuth = require("../../middleware/is-auth");
 const router = express.Router();
 router.post(
-  "",
+  "/",
   isAuth,
   [
     body("item").trim().not().isEmpty(),
@@ -51,6 +51,6 @@ router.delete(
 );
 
 // Get Stock Items
-router.get("", isAuth, stockController.getStockItems);
+router.get("/", isAuth, stockController.getStockItems);
 router.use(stockController.handleError);
 module.exports = router;
