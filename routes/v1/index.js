@@ -15,7 +15,7 @@ const stocksRoutes = require('./stocks');
 router.use('/auth', authRoutes);
 router.use('/feed', feedRoutes);
 router.use('/stockitems', stockRoutes);
-// router.use('/stocks', stocksRoutes);
+router.use('/stocks', stocksRoutes);
 
 
 router.get('', swaggerUi.serve, swaggerUi.setup(openApiSpec));

@@ -4,6 +4,7 @@ const stockSchema = new mongoose.Schema({
   item: {
     type: Schema.Types.ObjectId,
     ref: "StockItem",
+    unique: true,
   },
   quantity: { type: Number, required: true },
   as_on_date: {
