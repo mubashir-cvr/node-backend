@@ -125,7 +125,7 @@ exports.createStock = (req, res, next) => {
                 201,
                 "Stock Updated",
                 resultStock,
-                is_new
+                {is_new:is_new}
               );
               res.status(201).json(responseData);
             });
