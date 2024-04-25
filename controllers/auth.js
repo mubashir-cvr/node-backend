@@ -132,16 +132,29 @@ exports.checkAuth = (req, res, next) => {
 };
 
 exports.getPermissions = (req, res, next) => {
-  const currentPage = req.query.page || 1;
-  const perPage = 50;
+  const currentPage = parseInt(req.query.page) || 1;
+  const perPage = 20;
+  const searchQuery = req.query.search || "";
+
   let totalItems;
+
   hasPermission(req.userId, ["readPermission"]).then((hasPermission) => {
     if (hasPermission) {
-      Permission.find()
+      let query = {};
+      if (searchQuery) {
+        query = {
+          $or: [
+            { name: { $regex: new RegExp(searchQuery, "i") } },
+            { description: { $regex: new RegExp(searchQuery, "i") } },
+          ],
+        };
+      }
+
+      Permission.find(query)
         .countDocuments()
         .then((count) => {
           totalItems = count;
-          return Permission.find()
+          return Permission.find(query)
             .skip((currentPage - 1) * perPage)
             .limit(perPage);
         })
@@ -150,7 +163,16 @@ exports.getPermissions = (req, res, next) => {
             200,
             "Fetched permissions successfully.",
             permissions,
-            { totalItems: totalItems, nextPage: currentPage + 1 }
+            {
+              totalItems: totalItems,
+              currentPage: currentPage,
+              totalPages: Math.ceil(totalItems / perPage),
+              nextPage:
+                currentPage < Math.ceil(totalItems / perPage)
+                  ? currentPage + 1
+                  : null,
+              prevPage: currentPage > 1 ? currentPage - 1 : null,
+            }
           );
           res.status(200).json(responseData);
         })
@@ -392,7 +414,11 @@ exports.deleteRole = (req, res, next) => {
 
       // Check permission before deleting the role
       return hasPermission(req.userId, ["deleteRole"]).then((hasPermission) => {
-        if (!hasPermission || role.name==='superAdmin' || role.name==='adminAccess') {
+        if (
+          !hasPermission ||
+          role.name === "superAdmin" ||
+          role.name === "adminAccess"
+        ) {
           const responseData = [
             {
               type: "permission",
@@ -451,7 +477,6 @@ exports.getRoles = (req, res, next) => {
     })
     .then((roles) => {
       User.findById(req.userId).then((user) => {
-        
         let filteredRoles = roles;
         if (user.email !== "superadmin@gmail.com") {
           filteredRoles = roles.filter((role) => role.name !== "superAdmin");
@@ -464,7 +489,6 @@ exports.getRoles = (req, res, next) => {
         );
         res.status(200).json(responseData);
       });
-      
     })
     .catch((error) => {
       const response = errorResponse(500, error.message, []);
@@ -715,32 +739,50 @@ exports.getUsers = (req, res, next) => {
         const response = errorResponse(405, "Insufficient privilege", []);
         return res.status(405).json(response);
       }
-      const { search } = req.query;
+      const { search, page } = req.query;
+      const pageNumber = parseInt(page) || 1;
+      const perPage = 25;
+      const skip = (pageNumber - 1) * perPage;
+
+      let query = {};
       if (search) {
-        return User.find({
+        query = {
           $or: [
             { name: { $regex: new RegExp(search, "i") } },
             { phoneNumber: { $regex: new RegExp(search, "i") } },
             { email: { $regex: new RegExp(search, "i") } },
           ],
-        }).populate("role");
+        };
       }
 
-      return User.find().populate("role");
+      return Promise.all([
+        User.find(query).skip(skip).limit(perPage).populate("role"),
+        User.countDocuments(query),
+        pageNumber,
+        perPage,
+      ]);
     })
-    .then((users) => {
+    .then(([users, totalUsers, pageNumber, perPage]) => {
       User.findById(req.userId).then((user) => {
-        let filtereduser = users;
-        if (user.email != "superadmin@gmail.com") {
-          filtereduser = users.filter(
+        let filteredUsers = users;
+        if (user.email !== "superadmin@gmail.com") {
+          filteredUsers = users.filter(
             (user) => user.email !== "superadmin@gmail.com"
           );
         }
         const responseData = generateResponse(
           200,
           "Users Retrieved",
-          filtereduser,
-          {}
+          filteredUsers,
+          {
+            totalUsers,
+            nextPage:
+            pageNumber < Math.ceil(totalUsers / perPage)
+                ? currentPage + 1
+                : null,
+            currentPage: pageNumber,
+            totalPages: Math.ceil(totalUsers / perPage),
+          }
         );
         res.status(200).json(responseData);
       });

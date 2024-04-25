@@ -8,12 +8,14 @@ const openApiSpec = YAML.load(yamlFilePath);
 // Import and use auth and feed routes
 const authRoutes = require('./auth');
 const feedRoutes = require('./feed');
-const stockRoutes = require('./stocks');
+const stockRoutes = require('./stockitem');
+const stocksRoutes = require('./stocks');
 
 // Mount auth and feed routes
 router.use('/auth', authRoutes);
 router.use('/feed', feedRoutes);
-router.use('/stocks', stockRoutes);
+router.use('/stockitems', stockRoutes);
+// router.use('/stocks', stocksRoutes);
 
 
 router.get('', swaggerUi.serve, swaggerUi.setup(openApiSpec));
