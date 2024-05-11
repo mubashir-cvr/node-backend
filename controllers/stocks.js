@@ -110,7 +110,6 @@ exports.createStock = (req, res, next) => {
       let stock;
       let is_new;
       let ledger;
-
       // Start Mongoose session for transaction
       return mongoose.startSession().then((session) => {
         session.startTransaction();

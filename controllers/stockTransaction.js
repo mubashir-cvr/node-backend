@@ -52,7 +52,7 @@ exports.getStockLedgers = (req, res, next) => {
     })
     .then((query) => {
       return Promise.all([
-        StockLedger.find(query)
+        StockLedger.find(query).sort({ updated_at: -1 }) 
           .populate({ path: "item", select: "item item_type" })
           .populate({ path: "updated_user", select: "email name" })
           .skip(skip)
@@ -63,10 +63,11 @@ exports.getStockLedgers = (req, res, next) => {
       ]);
     })
     .then(([StockLedgers, totalItems, pageNumber, perPage]) => {
+      const orderedLedger=StockLedgers.sort((a, b) => a.updated_at - b.updated_at)
       const responseData = generateResponse(
         200,
         "StockLedger Items Retrieved",
-        StockLedgers,
+        orderedLedger,
         {
           totalItems,
           nextPage:

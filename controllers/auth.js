@@ -132,7 +132,7 @@ exports.checkAuth = (req, res, next) => {
 
 exports.getPermissions = (req, res, next) => {
   const currentPage = parseInt(req.query.page) || 1;
-  const perPage = 15;
+  const perPage = 20;
   const searchQuery = req.query.search || "";
 
   let totalItems;
@@ -148,7 +148,6 @@ exports.getPermissions = (req, res, next) => {
           ],
         };
       }
-
       Permission.find(query)
         .countDocuments()
         .then((count) => {
