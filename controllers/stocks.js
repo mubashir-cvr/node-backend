@@ -2,6 +2,9 @@ const { validationResult } = require("express-validator");
 const { hasPermission } = require("../middleware/hasPermission");
 const { Stock } = require("../models/stocks");
 const { errorResponse, generateResponse } = require("../Utils/utilities");
+const mongoose = require("mongoose");
+const StockItem = require("../models/stockItem");
+const { StockLedger } = require("../models/stockLedger");
 
 exports.getStocks = (req, res, next) => {
   const errors = validationResult(req);
@@ -13,6 +16,7 @@ exports.getStocks = (req, res, next) => {
   const pageNumber = parseInt(page) || 1;
   const perPage = 25;
   const skip = (pageNumber - 1) * perPage;
+
   hasPermission(req.userId, ["getStock", "allAccessToStock"])
     .then((hasPermission) => {
       if (!hasPermission) {
@@ -31,23 +35,29 @@ exports.getStocks = (req, res, next) => {
         );
         return Promise.reject(response);
       }
-      // Construct query based on search parameter
+
       let query = {};
       if (search) {
-        query = {
-          $or: [{ "item.name": { $regex: new RegExp(search, "i") } }],
-        };
+        return StockItem.find({
+          item: { $regex: new RegExp(search, "i") },
+        }).then((stockItems) => {
+          const itemIds = stockItems.map((item) => item._id);
+          query = { item: { $in: itemIds } };
+          return query;
+        });
+      } else {
+        return query;
       }
-      // Fetch stock items with pagination and search
+    })
+    .then((query) => {
       return Promise.all([
-        Stock.find(query).populate('item').skip(skip).limit(perPage),
+        Stock.find(query).populate("item").skip(skip).limit(perPage),
         Stock.countDocuments(query),
         pageNumber,
         perPage,
       ]);
     })
     .then(([stocks, totalItems, pageNumber, perPage]) => {
-
       const responseData = generateResponse(
         200,
         "Stock Items Retrieved",
@@ -76,6 +86,7 @@ exports.createStock = (req, res, next) => {
     const response = errorResponse(422, "Validation Failed", errors.array());
     return next(response);
   }
+
   hasPermission(req.userId, ["createStock", "allAccessToStock"])
     .then((hasPermission) => {
       if (!hasPermission) {
@@ -95,43 +106,79 @@ exports.createStock = (req, res, next) => {
         return Promise.reject(response);
       }
 
-      const { item, quantity } = req.body;
-      Stock.findOne({ item: item._id })
-        .then((stock) => {
-          if (stock) {
-            stock.quantity = parseFloat(stock.quantity) + parseFloat(quantity);
-            stock.updated_user = req.userId;
-            return Promise.all([
-              stock.save(),
-              is_new=false
-            ]);
-          } else {
-            const newStock = new Stock({
-              item,
-              quantity,
-              updated_user: req.userId, // Assuming the user ID is stored in req.userId
+      const { item, quantity, amount } = req.body;
+      let stock;
+      let is_new;
+      let ledger;
+
+      // Start Mongoose session for transaction
+      return mongoose.startSession().then((session) => {
+        session.startTransaction();
+
+        return Stock.findOne({ item: item })
+          .session(session)
+          .then((foundStock) => {
+            stock = foundStock;
+            if (stock) {
+              stock.quantity =
+                parseFloat(stock.quantity) + parseFloat(quantity);
+              stock.updated_user = req.userId;
+              is_new = false;
+            } else {
+              stock = new Stock({
+                item,
+                quantity,
+                updated_user: req.userId,
+              });
+              is_new = true;
+            }
+            return stock.save({ session });
+          })
+          .then((savedStock) => {
+            stock = savedStock;
+            ledger = new StockLedger({
+              item: stock.item,
+              transactionType: "Purchase",
+              quantity: quantity,
+              inOrOut: "IN",
+              amount: amount,
+              updated_user: req.userId,
             });
-            return Promise.all([
-              newStock.save(),
-              is_new=true
-            ]);
-          }
-        })
-        .then(([stock,is_new]) => {
-          Stock.findById(stock._id)
-            .populate("item")
-            .then((resultStock) => {
-              const responseData = generateResponse(
-                201,
-                "Stock Updated",
-                resultStock,
-                {is_new:is_new}
-              );
-              res.status(201).json(responseData);
+
+            return ledger.save({ session }).then(() => {
+              return session
+                .commitTransaction()
+                .then(() => {
+                  session.endSession();
+                  return [stock, is_new];
+                })
+                .catch((commitErr) => {
+                  session.abortTransaction();
+                  session.endSession();
+                  return Promise.reject(commitErr);
+                });
             });
+          })
+          .catch((err) => {
+            session.abortTransaction();
+            session.endSession();
+            return Promise.reject(err);
+          });
+      });
+    })
+    .then(([stock, is_new]) => {
+      return Stock.findById(stock._id)
+        .populate("item")
+        .then((resultStock) => {
+          const responseData = generateResponse(
+            201,
+            is_new ? "Stock Created" : "Stock Updated",
+            resultStock,
+            { is_new: is_new }
+          );
+          res.status(201).json(responseData);
         });
     })
-
     .catch((error) => {
       const response = errorResponse(500, error.message, []);
       return next(response);

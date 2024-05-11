@@ -10,12 +10,14 @@ const authRoutes = require('./auth');
 const feedRoutes = require('./feed');
 const stockRoutes = require('./stockitem');
 const stocksRoutes = require('./stocks');
+const stocksTransactionRoute = require('./stockTransaction');
 
 // Mount auth and feed routes
 router.use('/auth', authRoutes);
 router.use('/feed', feedRoutes);
 router.use('/stockitems', stockRoutes);
 router.use('/stocks', stocksRoutes);
+router.use('/stockshistory', stocksTransactionRoute);
 
 
 router.get('', swaggerUi.serve, swaggerUi.setup(openApiSpec));

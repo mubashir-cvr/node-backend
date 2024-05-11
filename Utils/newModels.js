@@ -27,6 +27,13 @@ const getAllModels = () => {
         { name: "deleteStockItem", description: "Delete Access" },
         { name: "allAccessToStockItem", description: "All access" },
       ],
+      StockLedger: [
+        { name: "readStockLedger", description: "Read access" },
+        { name: "createStockLedger", description: "Create access" },
+        { name: "updateStockLedger", description: "Update access" },
+        { name: "deleteStockLedger", description: "Delete Access" },
+        { name: "allAccessToStockLedger", description: "All access" },
+      ]
   };
 };
 

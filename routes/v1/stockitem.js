@@ -17,7 +17,7 @@ router.post(
       .trim()
       .not()
       .isEmpty()
-      .isIn(["KG", "METER", "NUMBER"]),
+      .isIn(["KG", "LENGTH", "COUNT"]),
   ],
   stockController.createStockItem
 );
@@ -37,7 +37,7 @@ router.put(
       .trim()
       .not()
       .isEmpty()
-      .isIn(["KG", "METER", "NUMBER"]),
+      .isIn(["KG", "LENGTH", "COUNT"]),
   ],
   stockController.updateStockItem
 );

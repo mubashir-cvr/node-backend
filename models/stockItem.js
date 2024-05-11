@@ -25,7 +25,7 @@ const stockSchema = new Schema({
   },
   unit_of_measurement: {
     type: String,
-    enum: ["KG", "METER", "NUMBER"],
+    enum: ["KG", "LENGTH", "NUMBER"],
     required: true,
   },
   as_on_date: {

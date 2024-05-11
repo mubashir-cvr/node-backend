@@ -85,10 +85,9 @@ exports.login = (req, res, next) => {
 
 exports.checkAuth = (req, res, next) => {
   const userId = req.userId;
-  User.findById(userId)
+  User.findById(userId).select("-password")
     .populate("role") // Assuming "role" is the field in the User model referencing the Role model
     .then((user) => {
-      // Check if the user has a role
       if (!user || !user.role) {
         throw new Error("User role not found.");
       }
@@ -133,7 +132,7 @@ exports.checkAuth = (req, res, next) => {
 
 exports.getPermissions = (req, res, next) => {
   const currentPage = parseInt(req.query.page) || 1;
-  const perPage = 20;
+  const perPage = 15;
   const searchQuery = req.query.search || "";
 
   let totalItems;
@@ -550,7 +549,7 @@ exports.createUser = (req, res, next) => {
       });
     })
     .then((newUser) => {
-      User.findById(newUser._id)
+      User.findById(newUser._id).select("-password")
         .populate("role")
         .then((createdUser) => {
           const responseData = generateResponse(
@@ -657,7 +656,7 @@ exports.updateUser = (req, res, next) => {
         const response = errorResponse(404, "User not found", []);
         return res.status(404).json(response);
       }
-      User.findById(user._id)
+      User.findById(user._id).select("-password")
         .populate("role")
         .then((updatedUser) => {
           const responseData = generateResponse(
@@ -756,7 +755,7 @@ exports.getUsers = (req, res, next) => {
       }
 
       return Promise.all([
-        User.find(query).skip(skip).limit(perPage).populate("role"),
+        User.find(query).skip(skip).limit(perPage).select("-password").populate("role"),
         User.countDocuments(query),
         pageNumber,
         perPage,
@@ -777,7 +776,7 @@ exports.getUsers = (req, res, next) => {
           {
             totalUsers,
             nextPage:
-            pageNumber < Math.ceil(totalUsers / perPage)
+              pageNumber < Math.ceil(totalUsers / perPage)
                 ? currentPage + 1
                 : null,
             currentPage: pageNumber,
