@@ -9,7 +9,6 @@ exports.createPrinter = (req, res, next) => {
     return next(response);
   }
 
-  // Check permission before creating a stock item
   hasPermission(req.userId, ["createPrinter", "allAccessToPrinter"])
     .then((hasPermission) => {
       if (!hasPermission) {
