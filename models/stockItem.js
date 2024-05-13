@@ -9,6 +9,7 @@ const stockSchema = new Schema({
   },
   item_type: {
     type: String,
+    enum: ["Paper", "Plate", "Other"],
     required: true,
   },
   gsm: {
@@ -25,7 +26,11 @@ const stockSchema = new Schema({
   },
   unit_of_measurement: {
     type: String,
-    enum: ["KG", "LENGTH", "NUMBER"],
+    enum: ["KG", "LENGTH", "COUNT"],
+    required: true,
+  },
+  unitPrice: {
+    type: Number,
     required: true,
   },
   as_on_date: {

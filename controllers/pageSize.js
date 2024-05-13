@@ -1,9 +1,8 @@
 const { validationResult } = require("express-validator");
 const { hasPermission } = require("../middleware/hasPermission");
-const StockItem = require("../models/stockItem");
+const { PageSize } = require("../models/PageSize");
 const { errorResponse, generateResponse } = require("../Utils/utilities");
-
-exports.createStockItem = (req, res, next) => {
+exports.createPageSize = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const response = errorResponse(422, "Validation Failed", errors.array());
@@ -11,7 +10,7 @@ exports.createStockItem = (req, res, next) => {
   }
 
   // Check permission before creating a stock item
-  hasPermission(req.userId, ["createStockItem"])
+  hasPermission(req.userId, ["createPageSize", "allAccessToPageSize"])
     .then((hasPermission) => {
       if (!hasPermission) {
         const responseData = [
@@ -30,22 +29,22 @@ exports.createStockItem = (req, res, next) => {
         return Promise.reject(response);
       }
 
-      const { item, item_type, gsm, dimention_length, dimention_breadth, unit_of_measurement,unitPrice, as_on_date } = req.body;
-      const newStockItem = new StockItem({
-        item,
-        item_type,
-        gsm,
+      const { name, dimention_length, dimention_breadth } = req.body;
+      const newPageSize = new PageSize({
+        name,
         dimention_length,
         dimention_breadth,
-        unit_of_measurement,
-        unitPrice,
-        as_on_date,
         updated_user: req.userId, // Assuming the user ID is stored in req.userId
       });
-      return newStockItem.save();
+      return newPageSize.save();
     })
-    .then((stockItem) => {
-      const responseData = generateResponse(201, "Stock Item Created", stockItem, {});
+    .then((pageSize) => {
+      const responseData = generateResponse(
+        201,
+        "Stock Item Created",
+        pageSize,
+        {}
+      );
       res.status(201).json(responseData);
     })
     .catch((error) => {
@@ -54,63 +53,60 @@ exports.createStockItem = (req, res, next) => {
     });
 };
 
-exports.updateStockItem = (req, res, next) => {
+exports.updatePageSize = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const response = errorResponse(422, "Validation Failed", errors.array());
     return next(response);
   }
 
-  const stockItemId = req.params.stockItemId;
-  const { item, item_type, gsm, dimention_length, dimention_breadth, unit_of_measurement,unitPrice } = req.body;
+  const pageSizeId = req.params.pageSizeId;
+  const { name, dimention_length, dimention_breadth } = req.body;
 
-  StockItem.findById(stockItemId)
-    .then((stockItem) => {
-      if (!stockItem) {
+  PageSize.findById(pageSizeId)
+    .then((pageSize) => {
+      if (!pageSize) {
         const response = errorResponse(404, "Stock Item not found", []);
         return Promise.reject(response);
       }
-      return stockItem;
+      return pageSize;
     })
-    .then((stockItem) => {
-      return hasPermission(req.userId, ["updateStockItem"]).then(
-        (hasPermission) => {
-          if (!hasPermission) {
-            const responseData = [
-              {
-                type: "permission",
-                msg: "Insufficient privilege",
-                path: "permission",
-                location: "db",
-              },
-            ];
-            const response = errorResponse(
-              405,
-              "Insufficient privilege",
-              responseData
-            );
-            return Promise.reject(response);
-          }
-          return stockItem;
+    .then((pageSize) => {
+      return hasPermission(req.userId, [
+        "updatePageSize",
+        "allAccessToPageSize",
+      ]).then((hasPermission) => {
+        if (!hasPermission) {
+          const responseData = [
+            {
+              type: "permission",
+              msg: "Insufficient privilege",
+              path: "permission",
+              location: "db",
+            },
+          ];
+          const response = errorResponse(
+            405,
+            "Insufficient privilege",
+            responseData
+          );
+          return Promise.reject(response);
         }
-      );
+        return pageSize;
+      });
     })
-    .then((stockItem) => {
-      stockItem.item = item;
-      stockItem.item_type = item_type;
-      stockItem.gsm = gsm;
-      stockItem.dimention_length = dimention_length;
-      stockItem.dimention_breadth = dimention_breadth;
-      stockItem.unit_of_measurement = unit_of_measurement;
-      stockItem.unitPrice = unitPrice;
-      stockItem.updated_user = req.userId; // Assuming the user ID is stored in req.userId
-      return stockItem.save();
+    .then((pageSize) => {
+      pageSize.name = name;
+      pageSize.dimention_length = dimention_length;
+      pageSize.dimention_breadth = dimention_breadth;
+      pageSize.updated_user = req.userId; // Assuming the user ID is stored in req.userId
+      return pageSize.save();
     })
-    .then((updatedStockItem) => {
+    .then((updatedPageSize) => {
       const responseData = generateResponse(
         200,
         "Stock Item Updated",
-        updatedStockItem,
+        updatedPageSize,
         {}
       );
       res.status(200).json(responseData);
@@ -121,47 +117,53 @@ exports.updateStockItem = (req, res, next) => {
     });
 };
 
-exports.deleteStockItem = (req, res, next) => {
+exports.deletePageSize = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const response = errorResponse(422, "Validation Failed", errors.array());
     return next(response);
   }
 
-  const stockItemId = req.params.stockItemId;
+  const pageSizeId = req.params.pageSizeId;
 
-  StockItem.findById(stockItemId)
-    .then((stockItem) => {
-      if (!stockItem) {
+  PageSize.findById(pageSizeId)
+    .then((pageSize) => {
+      if (!pageSize) {
         const response = errorResponse(404, "Stock Item not found", []);
         return Promise.reject(response);
       }
 
       // Check permission before deleting the stock item
-      return hasPermission(req.userId, ["deleteStockItem"]).then(
-        (hasPermission) => {
-          if (!hasPermission) {
-            const responseData = [
-              {
-                type: "permission",
-                msg: "Insufficient privilege",
-                path: "permission",
-                location: "db",
-              },
-            ];
-            const response = errorResponse(
-              405,
-              "Insufficient privilege",
-              responseData
-            );
-            return Promise.reject(response);
-          }
-          return StockItem.findByIdAndDelete(stockItemId);
+      return hasPermission(req.userId, [
+        "deletePageSize",
+        "allAccessToPageSize",
+      ]).then((hasPermission) => {
+        if (!hasPermission) {
+          const responseData = [
+            {
+              type: "permission",
+              msg: "Insufficient privilege",
+              path: "permission",
+              location: "db",
+            },
+          ];
+          const response = errorResponse(
+            405,
+            "Insufficient privilege",
+            responseData
+          );
+          return Promise.reject(response);
         }
-      );
+        return PageSize.findByIdAndDelete(pageSizeId);
+      });
     })
     .then((result) => {
-      const responseData = generateResponse(200, "Stock Item Deleted", result, {});
+      const responseData = generateResponse(
+        200,
+        "Stock Item Deleted",
+        result,
+        {}
+      );
       res.status(200).json(responseData);
     })
     .catch((error) => {
@@ -170,7 +172,7 @@ exports.deleteStockItem = (req, res, next) => {
     });
 };
 
-exports.getStockItems = (req, res, next) => {
+exports.getPageSizes = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     const response = errorResponse(422, "Validation Failed", errors.array());
@@ -184,7 +186,7 @@ exports.getStockItems = (req, res, next) => {
   const skip = (pageNumber - 1) * perPage;
 
   // Check permission before listing stock items
-  hasPermission(req.userId, ["getStockItem"])
+  hasPermission(req.userId, ["getPageSize"])
     .then((hasPermission) => {
       if (!hasPermission) {
         const responseData = [
@@ -207,29 +209,29 @@ exports.getStockItems = (req, res, next) => {
       if (search) {
         query = {
           $or: [
-            { item: { $regex: new RegExp(search, "i") } },
-            { item_type: { $regex: new RegExp(search, "i") } },
-            // Add more fields for search if needed
+            { name: { $regex: new RegExp(search, "i") } },
           ],
         };
       }
       // Fetch stock items with pagination and search
       return Promise.all([
-        StockItem.find(query).skip(skip).limit(perPage),
-        StockItem.countDocuments(query),
+        PageSize.find(query).skip(skip).limit(perPage),
+        PageSize.countDocuments(query),
         pageNumber,
         perPage,
       ]);
     })
-    .then(([stockItems, totalItems, pageNumber, perPage]) => {
+    .then(([pageSizes, totalItems, pageNumber, perPage]) => {
       const responseData = generateResponse(
         200,
         "Stock Items Retrieved",
-        stockItems,
+        pageSizes,
         {
           totalItems,
           nextPage:
-            pageNumber < Math.ceil(totalItems / perPage) ? pageNumber + 1 : null,
+            pageNumber < Math.ceil(totalItems / perPage)
+              ? pageNumber + 1
+              : null,
           currentPage: pageNumber,
           totalPages: Math.ceil(totalItems / perPage),
         }

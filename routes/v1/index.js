@@ -11,15 +11,16 @@ const feedRoutes = require('./feed');
 const stockRoutes = require('./stockitem');
 const stocksRoutes = require('./stocks');
 const stocksTransactionRoute = require('./stockTransaction');
-
+const paperSizeRoute = require('./pageSize');
+const printerRoute = require('./printer');
 // Mount auth and feed routes
 router.use('/auth', authRoutes);
 router.use('/feed', feedRoutes);
 router.use('/stockitems', stockRoutes);
 router.use('/stocks', stocksRoutes);
 router.use('/stockshistory', stocksTransactionRoute);
-
-
+router.use('/pagesizes', paperSizeRoute);
+router.use('/printers',printerRoute);
 router.get('', swaggerUi.serve, swaggerUi.setup(openApiSpec));
 
 
