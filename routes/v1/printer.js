@@ -22,7 +22,7 @@ router.post(
 
 // Update Stock Item
 router.put(
-  "/:printerId",
+  "/edit/:printerId",
   isAuth,
   [
     body("name").trim().not().isEmpty(),

@@ -24,7 +24,7 @@ router.post(
 
 // Update Stock Item
 router.put(
-  "/:stockItemId",
+  "/edit/:stockItemId",
   isAuth,
   [
     param("stockItemId").trim().not().isEmpty(),

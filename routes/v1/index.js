@@ -14,6 +14,7 @@ const stocksTransactionRoute = require('./stockTransaction');
 const paperSizeRoute = require('./pageSize');
 const printerRoute = require('./printer');
 const customerRoute = require('./customer');
+const quotationRoute = require('./quotation');
 // Mount auth and feed routes
 router.use('/auth', authRoutes);
 router.use('/feed', feedRoutes);
@@ -23,6 +24,7 @@ router.use('/stockshistory', stocksTransactionRoute);
 router.use('/pagesizes', paperSizeRoute);
 router.use('/printers',printerRoute);
 router.use('/customers',customerRoute);
+router.use('/quotations',quotationRoute);
 router.get('', swaggerUi.serve, swaggerUi.setup(openApiSpec));
 
 

@@ -100,7 +100,7 @@ router.post(
   authController.createRole
 );
 router.put(
-  "/roles/:roleId",
+  "/roles/edit/:roleId",
   isAuth,
   [
     param("roleId").trim().not().isEmpty(),

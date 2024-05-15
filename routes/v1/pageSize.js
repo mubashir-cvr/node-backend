@@ -17,7 +17,7 @@ router.post(
 
 // Update Stock Item
 router.put(
-  "/:pageSizeId",
+  "/edit/:pageSizeId",
   isAuth,
   [
     body("name").trim().not().isEmpty(),

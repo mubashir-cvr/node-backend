@@ -33,6 +33,27 @@ const getAllModels = () => {
         { name: "updateStockLedger", description: "Update access" },
         { name: "deleteStockLedger", description: "Delete Access" },
         { name: "allAccessToStockLedger", description: "All access" },
+      ],
+      Customer: [
+        { name: "readCustomer", description: "Read access" },
+        { name: "createCustomer", description: "Create access" },
+        { name: "updateCustomer", description: "Update access" },
+        { name: "deleteCustomer", description: "Delete Access" },
+        { name: "allAccessToCustomer", description: "All access" },
+      ],
+      PageSize: [
+        { name: "readPageSize", description: "Read access" },
+        { name: "createPageSize", description: "Create access" },
+        { name: "updatePageSize", description: "Update access" },
+        { name: "deletePageSize", description: "Delete Access" },
+        { name: "allAccessToPageSize", description: "All access" },
+      ],
+      Printer: [
+        { name: "readPrinter", description: "Read access" },
+        { name: "createPrinter", description: "Create access" },
+        { name: "updatePrinter", description: "Update access" },
+        { name: "deletePrinter", description: "Delete Access" },
+        { name: "allAccessToPrinter", description: "All access" },
       ]
   };
 };

@@ -33,7 +33,7 @@ router.post(
 
 // Update Stock Item
 router.put(
-  "/:customerId",
+  "/edit/:customerId",
   isAuth,
   [
     body("name").trim().not().isEmpty(),

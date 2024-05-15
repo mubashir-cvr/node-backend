@@ -213,8 +213,7 @@ exports.getCustomers = (req, res, next) => {
       let query = {};
       if (search) {
         query = {
-          $or: [{ name: { $regex: new RegExp(search, "i") } }],
-          $or: [{ phoneNumber: { $regex: new RegExp(search, "i") } }],
+          $or: [{ name: { $regex: new RegExp(search, "i") } },{ phoneNumber: { $regex: new RegExp(search, "i") } }],
         };
       }
       // Fetch stock items with pagination and search
