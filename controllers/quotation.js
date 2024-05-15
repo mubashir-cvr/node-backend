@@ -298,20 +298,21 @@ exports.getQuotationDetails = (req, res, next) => {
         );
         return Promise.reject(response);
       }
-      let query = {quotation:quotationId};
-      
+      let query = { quotation: quotationId };
+
       return Promise.all([
-        QuotationItem.find(query).skip(skip).limit(perPage).populate("customer"),
+        Quotation.findById(quotationId).populate("customer"),
+        QuotationItem.find(query).skip(skip).limit(perPage),
         QuotationItem.countDocuments(query),
         pageNumber,
         perPage,
       ]);
     })
-    .then(([quotations, totalItems, pageNumber, perPage]) => {
+    .then(([quotation, quotationItems, totalItems, pageNumber, perPage]) => {
       const responseData = generateResponse(
         200,
         "Quotations Retrieved",
-        quotations,
+        { quotation: quotation, quotationItems: quotationItems },
         {
           totalItems,
           nextPage:
