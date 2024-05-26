@@ -34,6 +34,10 @@ const printer = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  isActive: {
+    type: Boolean,
+    default:true
+  },
   as_on_date: {
     type: Date,
     default: Date.now,

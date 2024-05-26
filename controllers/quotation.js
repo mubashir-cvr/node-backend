@@ -4,7 +4,7 @@ const { Quotation } = require("../models/quotation");
 const { QuotationItem } = require("../models/quotationItem");
 const { errorResponse, generateResponse } = require("../Utils/utilities");
 const { Customer } = require("../models/customer");
-const { Query } = require("mongoose");
+const { Printer } = require("../models/printer");
 exports.createQuotation = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -249,11 +249,11 @@ exports.getQuotations = (req, res, next) => {
         {
           totalItems,
           nextPage:
-            pageNumber < Math.ceil(totalItems / perPage)
+            pageNumber < Math.floor(totalItems / perPage)
               ? pageNumber + 1
               : null,
           currentPage: pageNumber,
-          totalPages: Math.ceil(totalItems / perPage),
+          totalPages: Math.floor(totalItems / perPage),
         }
       );
       res.status(200).json(responseData);
@@ -263,8 +263,6 @@ exports.getQuotations = (req, res, next) => {
       return next(response);
     });
 };
-
-
 
 exports.getQuotationDetails = (req, res, next) => {
   const errors = validationResult(req);
@@ -316,11 +314,11 @@ exports.getQuotationDetails = (req, res, next) => {
         {
           totalItems,
           nextPage:
-            pageNumber < Math.ceil(totalItems / perPage)
+            pageNumber < Math.floor(totalItems / perPage)
               ? pageNumber + 1
               : null,
           currentPage: pageNumber,
-          totalPages: Math.ceil(totalItems / perPage),
+          totalPages: Math.floor(totalItems / perPage),
         }
       );
       res.status(200).json(responseData);
@@ -330,6 +328,132 @@ exports.getQuotationDetails = (req, res, next) => {
       return next(response);
     });
 };
+
+exports.addQuotationItem = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const response = errorResponse(422, "Validation Failed", errors.array());
+      return next(response);
+    }
+
+    const quotationId = req.params.quotationId;
+    const { item, size, count, testcount } = req.body;
+
+    if (item.name !== "Printing") {
+      return res.status(400).json({ message: "Invalid item type" });
+    }
+
+    const printers = await Printer.find({
+      isActive: true,
+      $or: [
+        {
+          $and: [
+            { maxLength: { $gt: size.dimention_length } },
+            { maxBreadth: { $gt: size.dimention_breadth } },
+          ],
+        },
+        {
+          $and: [
+            { maxLength: { $gt: size.dimention_breadth } },
+            { maxBreadth: { $gt: size.dimention_length } },
+          ],
+        },
+      ],
+    }).exec();
+    let selectedPrinters = [];
+    let minCost = Infinity;
+
+    printers.forEach((printer) => {
+      const verticalCount =
+        Math.floor(printer.maxLength / size.dimention_length) *
+        Math.floor(printer.maxBreadth / size.dimention_breadth);
+
+      const horizontalCount =
+        Math.floor(printer.maxLength / size.dimention_breadth) *
+        Math.floor(printer.maxBreadth / size.dimention_length);
+      const maxPrintCountPerPrint = Math.max(verticalCount, horizontalCount);
+      const isVertical = verticalCount === maxPrintCountPerPrint;
+      const dawnCount = isVertical
+        ? Math.floor(printer.maxLength / size.dimention_length)
+        : Math.floor(printer.maxLength / size.dimention_breadth);
+      const dawnLength = isVertical
+        ? size.dimention_length * dawnCount
+        : size.dimention_breadth * dawnCount;
+      const dawnWaste =printer.maxLength -dawnLength;
+      const rightCount = isVertical
+        ? Math.floor(printer.maxBreadth / size.dimention_breadth)
+        : Math.floor(printer.maxBreadth / size.dimention_length);
+      const rightLength = isVertical
+        ? size.dimention_breadth * rightCount
+        : size.dimention_length * rightCount;
+      const rightWaste = printer.maxBreadth-rightLength;
+      
+      const totalPrint = Math.ceil(
+        (parseInt(count) + parseInt(testcount)) / maxPrintCountPerPrint
+      );
+      let printCost;
+
+      if (totalPrint < printer.minChargeCutOffCount) {
+        const extraSets = Math.max(
+          0,
+          Math.ceil(
+            (totalPrint - printer.maxCountPrintPerMinCharge) /
+              printer.maxCountPrintPerMinCharge
+          )
+        );
+        printCost =
+          printer.minimumCharge + extraSets * printer.extraChargePerSet;
+      } else {
+        const printSets = Math.floor(
+          totalPrint / printer.maxCountPrintPerMinCharge
+        );
+        printCost = printSets * printer.extraChargePerSet;
+      }
+
+      if (printCost < minCost) {
+        minCost = printCost;
+        selectedPrinters = [
+          {
+            printer,
+            amount: minCost,
+            numberOfPrint: totalPrint,
+
+            printLayout: {
+              vertical: isVertical,
+              dawnCount,
+              dawnLength: parseFloat(dawnLength.toFixed(2)),
+              dawnWaste: parseFloat(dawnWaste.toFixed(2)),
+              rightCount,
+              rightLength: parseFloat(rightLength.toFixed(2)),
+              rightWaste: parseFloat(rightWaste.toFixed(2)),
+            },
+          },
+        ];
+      } else if (printCost === minCost) {
+        selectedPrinters.push({
+          printer,
+          amount: minCost,
+          numberOfPrint: totalPrint,
+          printLayout: {
+            vertical: isVertical,
+            dawnCount,
+            dawnLength: parseFloat(dawnLength.toFixed(2)),
+            dawnWaste: parseFloat(dawnWaste.toFixed(2)),
+            rightCount,
+            rightLength: parseFloat(rightLength.toFixed(2)),
+            rightWaste: parseFloat(rightWaste.toFixed(2)),
+          },
+        });
+      }
+    });
+
+    res.status(201).json(selectedPrinters);
+  } catch (error) {
+    next(error);
+  }
+};
+
 exports.handleError = (err, req, res, next) => {
   console.error(err.stack);
   res.status(err.statusCode || 500).json({

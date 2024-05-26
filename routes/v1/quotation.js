@@ -13,7 +13,7 @@ router.post(
   quotationController.createQuotation
 );
 
-// Update Stock Item
+
 router.put(
   "/edit/:quotationId",
   isAuth,
@@ -30,7 +30,16 @@ router.get(
   quotationController.getQuotationDetails
 );
 
-// Delete Stock Item
+router.post(
+  "/add/:quotationId",
+  isAuth,
+  [
+    body("item").not().isEmpty()
+  ],
+  quotationController.addQuotationItem
+);
+
+
 router.delete(
   "/:quotationId",
   isAuth,
@@ -38,7 +47,7 @@ router.delete(
   quotationController.deleteQuotation
 );
 
-// Get Stock Items
+
 router.get("/", isAuth, quotationController.getQuotations);
 router.use(quotationController.handleError);
 module.exports = router;
