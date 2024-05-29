@@ -339,7 +339,7 @@ exports.addQuotationItem = async (req, res, next) => {
 
     const quotationId = req.params.quotationId;
     const { item, size, count, testcount } = req.body;
-
+    const printingCopyCount = parseInt(count) + parseInt(testcount);
     if (item.name !== "Printing") {
       return res.status(400).json({ message: "Invalid item type" });
     }
@@ -361,7 +361,9 @@ exports.addQuotationItem = async (req, res, next) => {
         },
       ],
     }).exec();
-    let selectedPrinters = [];
+
+    let selectedPrinter;
+    let layout = {};
     let minCost = Infinity;
 
     printers.forEach((printer) => {
@@ -372,83 +374,91 @@ exports.addQuotationItem = async (req, res, next) => {
       const horizontalCount =
         Math.floor(printer.maxLength / size.dimention_breadth) *
         Math.floor(printer.maxBreadth / size.dimention_length);
-      const maxPrintCountPerPrint = Math.max(verticalCount, horizontalCount);
-      const isVertical = verticalCount === maxPrintCountPerPrint;
-      const dawnCount = isVertical
-        ? Math.floor(printer.maxLength / size.dimention_length)
-        : Math.floor(printer.maxLength / size.dimention_breadth);
-      const dawnLength = isVertical
-        ? size.dimention_length * dawnCount
-        : size.dimention_breadth * dawnCount;
-      const dawnWaste =printer.maxLength -dawnLength;
-      const rightCount = isVertical
-        ? Math.floor(printer.maxBreadth / size.dimention_breadth)
-        : Math.floor(printer.maxBreadth / size.dimention_length);
-      const rightLength = isVertical
-        ? size.dimention_breadth * rightCount
-        : size.dimention_length * rightCount;
-      const rightWaste = printer.maxBreadth-rightLength;
-      
-      const totalPrint = Math.ceil(
-        (parseInt(count) + parseInt(testcount)) / maxPrintCountPerPrint
-      );
-      let printCost;
+      const maxCopyPerPrint = Math.max(verticalCount, horizontalCount);
 
-      if (totalPrint < printer.minChargeCutOffCount) {
-        const extraSets = Math.max(
-          0,
-          Math.ceil(
-            (totalPrint - printer.maxCountPrintPerMinCharge) /
-              printer.maxCountPrintPerMinCharge
-          )
+      let orientation =
+        maxCopyPerPrint === verticalCount ? "vertical" : "horizontal";
+      let verticalRows;
+      let horizontalColumns;
+      let vertialPaperLength;
+      let vertialPaperWaste;
+      let horizontalPaperLength;
+      let horizontalPaperWaste;
+      if (orientation === "vertical") {
+        verticalRows = Math.floor(printer.maxLength / size.dimention_length);
+        horizontalColumns = Math.floor(
+          printer.maxBreadth / size.dimention_breadth
         );
-        printCost =
-          printer.minimumCharge + extraSets * printer.extraChargePerSet;
+        vertialPaperLength = verticalRows * size.dimention_length;
+        vertialPaperWaste = printer.maxLength - vertialPaperLength;
+        horizontalPaperLength = size.dimention_breadth * horizontalColumns;
+        horizontalPaperWaste = printer.maxBreadth - horizontalPaperLength;
       } else {
-        const printSets = Math.floor(
-          totalPrint / printer.maxCountPrintPerMinCharge
+        verticalRows = Math.floor(printer.maxLength / size.dimention_breadth);
+        horizontalColumns = Math.floor(
+          printer.maxBreadth / size.dimention_length
         );
-        printCost = printSets * printer.extraChargePerSet;
+        vertialPaperLength = verticalRows * size.dimention_breadth;
+        vertialPaperWaste = printer.maxLength - vertialPaperLength;
+        horizontalPaperLength = size.dimention_length * horizontalColumns;
+        horizontalPaperWaste = printer.maxBreadth - horizontalPaperLength;
       }
-
-      if (printCost < minCost) {
-        minCost = printCost;
-        selectedPrinters = [
-          {
-            printer,
-            amount: minCost,
-            numberOfPrint: totalPrint,
-
-            printLayout: {
-              vertical: isVertical,
-              dawnCount,
-              dawnLength: parseFloat(dawnLength.toFixed(2)),
-              dawnWaste: parseFloat(dawnWaste.toFixed(2)),
-              rightCount,
-              rightLength: parseFloat(rightLength.toFixed(2)),
-              rightWaste: parseFloat(rightWaste.toFixed(2)),
-            },
+      const totalPrint = Math.ceil(printingCopyCount / maxCopyPerPrint);
+      const minimumCharge = printer.minimumCharge;
+      const maxPrints = printer.maxCountPrintPerMinCharge;
+      const extraChargePerAdditionalSet = printer.extraChargePerSet;
+      let printingCost = 0;
+      if (totalPrint >= printer.minChargeCutOffCount) {
+        printingCost +=
+          Math.ceil(totalPrint / maxPrints) * extraChargePerAdditionalSet;
+      } else {
+        printingCost += minimumCharge;
+        printingCost +=
+          (Math.ceil(totalPrint / maxPrints) - 1) * extraChargePerAdditionalSet;
+      }
+      if (printingCost < minCost) {
+        selectedPrinter = printer;
+        layout = {
+          orientation,
+          horizontalColumns,
+          verticalRows,
+          horizontalPaperLength,
+          horizontalPaperWaste,
+          vertialPaperLength,
+          vertialPaperWaste,
+          printingCost,
+          totalPrint,
+          copySize: {
+            length: size.dimention_length,
+            breadth: size.dimention_breadth,
+            name: size.name,
           },
-        ];
-      } else if (printCost === minCost) {
-        selectedPrinters.push({
-          printer,
-          amount: minCost,
-          numberOfPrint: totalPrint,
+          paperSize: {
+            length: printer.maxLength,
+            breadth: printer.maxBreadth,
+          },
           printLayout: {
-            vertical: isVertical,
-            dawnCount,
-            dawnLength: parseFloat(dawnLength.toFixed(2)),
-            dawnWaste: parseFloat(dawnWaste.toFixed(2)),
-            rightCount,
-            rightLength: parseFloat(rightLength.toFixed(2)),
-            rightWaste: parseFloat(rightWaste.toFixed(2)),
+            length: vertialPaperLength,
+            lengthWaste: vertialPaperWaste,
+            breadth: horizontalPaperLength,
+            breadthWaste: horizontalPaperWaste,
+            maxCopyPerPrint,
+            orientation,
+            printingCost,
+            totalPrint,
+            count,
+            testcount
           },
-        });
+        };
       }
     });
-
-    res.status(201).json(selectedPrinters);
+    const responseData = generateResponse(
+      201,
+      "priterselected",
+      { selectedPrinter, layout },
+      {}
+    );
+    res.status(201).json(responseData);
   } catch (error) {
     next(error);
   }
