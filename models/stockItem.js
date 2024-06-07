@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
-// Define the stock schema
 const stockSchema = new Schema({
   item: {
     type: String,
@@ -33,13 +32,28 @@ const stockSchema = new Schema({
     type: Number,
     required: true,
   },
+  suitablePrinters: [
+    {
+      id: { type: Number, required: false },
+      printer: {
+        type: Schema.Types.ObjectId,
+        ref: "Printer",
+        required: true,
+      },
+      sheetCapacity: {
+        type: Number,
+        required: true,
+      },
+    },
+  ],
   as_on_date: {
     type: Date,
     default: Date.now,
   },
+  updated_at: { type: Date, default: Date.now },
+  updated_user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 });
 
-// Create the Stock model
 const StockItem = mongoose.model("StockItem", stockSchema);
 
 module.exports = StockItem;

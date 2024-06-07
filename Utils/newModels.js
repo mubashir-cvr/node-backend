@@ -55,10 +55,27 @@ const getAllModels = () => {
         { name: "deletePrinter", description: "Delete Access" },
         { name: "allAccessToPrinter", description: "All access" },
       ]
+,
+      Quotation: [
+        { name: "readQuotation", description: "Read access" },
+        { name: "createQuotation", description: "Create access" },
+        { name: "updateQuotation", description: "Update access" },
+        { name: "deleteQuotation", description: "Delete Access" },
+        { name: "allAccessToQuotation", description: "All access" },
+      ],
+      Quotation: [
+        { name: "readQuotation", description: "Read access" },
+        { name: "createQuotation", description: "Create access" },
+        { name: "updateQuotation", description: "Update access" },
+        { name: "deleteQuotation", description: "Delete Access" },
+        { name: "allAccessToQuotation", description: "All access" },
+      ],
+
   };
 };
 
 const modelSyncKey = false;
+
 
 module.exports = {
   getAllModels,

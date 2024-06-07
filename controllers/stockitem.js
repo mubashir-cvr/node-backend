@@ -30,7 +30,17 @@ exports.createStockItem = (req, res, next) => {
         return Promise.reject(response);
       }
 
-      const { item, item_type, gsm, dimention_length, dimention_breadth, unit_of_measurement,unitPrice, as_on_date } = req.body;
+      const {
+        item,
+        item_type,
+        gsm,
+        dimention_length,
+        dimention_breadth,
+        unit_of_measurement,
+        unitPrice,
+        suitablePrinters,
+        as_on_date,
+      } = req.body;
       const newStockItem = new StockItem({
         item,
         item_type,
@@ -39,13 +49,19 @@ exports.createStockItem = (req, res, next) => {
         dimention_breadth,
         unit_of_measurement,
         unitPrice,
+        suitablePrinters,
         as_on_date,
         updated_user: req.userId, // Assuming the user ID is stored in req.userId
       });
       return newStockItem.save();
     })
     .then((stockItem) => {
-      const responseData = generateResponse(201, "Stock Item Created", stockItem, {});
+      const responseData = generateResponse(
+        201,
+        "Stock Item Created",
+        stockItem,
+        {}
+      );
       res.status(201).json(responseData);
     })
     .catch((error) => {
@@ -62,7 +78,16 @@ exports.updateStockItem = (req, res, next) => {
   }
 
   const stockItemId = req.params.stockItemId;
-  const { item, item_type, gsm, dimention_length, dimention_breadth, unit_of_measurement,unitPrice } = req.body;
+  const {
+    item,
+    item_type,
+    gsm,
+    dimention_length,
+    dimention_breadth,
+    unit_of_measurement,
+    unitPrice,
+    suitablePrinters,
+  } = req.body;
 
   StockItem.findById(stockItemId)
     .then((stockItem) => {
@@ -103,17 +128,29 @@ exports.updateStockItem = (req, res, next) => {
       stockItem.dimention_breadth = dimention_breadth;
       stockItem.unit_of_measurement = unit_of_measurement;
       stockItem.unitPrice = unitPrice;
+      stockItem.suitablePrinters = suitablePrinters;
       stockItem.updated_user = req.userId; // Assuming the user ID is stored in req.userId
       return stockItem.save();
     })
     .then((updatedStockItem) => {
-      const responseData = generateResponse(
-        200,
-        "Stock Item Updated",
-        updatedStockItem,
-        {}
-      );
-      res.status(200).json(responseData);
+      StockItem.findById(updatedStockItem._id)
+        .populate({
+          path: "suitablePrinters.printer",
+          model: "Printer",
+        })
+        .then((responseStock) => {
+          const responseData = generateResponse(
+            200,
+            "Stock Item Updated",
+            responseStock,
+            {}
+          );
+          res.status(200).json(responseData);
+        })
+        .catch((error) => {
+          const response = errorResponse(500, error.message, []);
+          return next(response);
+        });
     })
     .catch((error) => {
       const response = errorResponse(500, error.message, []);
@@ -161,7 +198,12 @@ exports.deleteStockItem = (req, res, next) => {
       );
     })
     .then((result) => {
-      const responseData = generateResponse(200, "Stock Item Deleted", result, {});
+      const responseData = generateResponse(
+        200,
+        "Stock Item Deleted",
+        result,
+        {}
+      );
       res.status(200).json(responseData);
     })
     .catch((error) => {
@@ -215,7 +257,10 @@ exports.getStockItems = (req, res, next) => {
       }
       // Fetch stock items with pagination and search
       return Promise.all([
-        StockItem.find(query).skip(skip).limit(perPage),
+        StockItem.find(query).skip(skip).limit(perPage).populate({
+          path: "suitablePrinters.printer",
+          model: "Printer",
+        }),
         StockItem.countDocuments(query),
         pageNumber,
         perPage,
@@ -229,7 +274,9 @@ exports.getStockItems = (req, res, next) => {
         {
           totalItems,
           nextPage:
-            pageNumber < Math.ceil(totalItems / perPage) ? pageNumber + 1 : null,
+            pageNumber < Math.ceil(totalItems / perPage)
+              ? pageNumber + 1
+              : null,
           currentPage: pageNumber,
           totalPages: Math.ceil(totalItems / perPage),
         }

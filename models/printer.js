@@ -3,11 +3,12 @@ const printer = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
   },
   printingMaterial: {
     type: String,
     required: true,
+    enum: ["Paper", "Other"],
     default: "Paper",
   },
   maxLength: {
@@ -18,25 +19,39 @@ const printer = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  minimumCharge: {
-    type: Number,
-    required: true,
-  },
-  maxCountPrintPerMinCharge: {
-    type: Number,
-    required: true,
-  },
-  extraChargePerSet: {
-    type: Number,
-    required: true,
-  },
-  minChargeCutOffCount: {
-    type: Number,
-    required: true,
-  },
+  charges: [
+    {
+      id: { type: Number, required: false },
+      colour: {
+        type: String,
+        enum: ["Single", "Two Colour", "Three Colour", "Multi"],
+        required: true,
+      },
+      minimumCharge: {
+        type: Number,
+        required: true,
+      },
+      plateCharge: {
+        type: Number,
+        required: true,
+      },
+      maxCountPrintPerMinCharge: {
+        type: Number,
+        required: true,
+      },
+      extraChargePerSet: {
+        type: Number,
+        required: true,
+      },
+      minChargeCutOffCount: {
+        type: Number,
+        required: true,
+      },
+    },
+  ],
   isActive: {
     type: Boolean,
-    default:true
+    default: true,
   },
   as_on_date: {
     type: Date,

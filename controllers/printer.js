@@ -34,19 +34,16 @@ exports.createPrinter = (req, res, next) => {
         maxLength,
         maxBreadth,
         minimumCharge,
-        maxCountPrintPerMinCharge,
-        extraChargePerSet,
-        minChargeCutOffCount,
+        charges
       } = req.body;
+      console.log(charges)
       const newPrinter = new Printer({
         name,
         printingMaterial,
         maxLength,
         maxBreadth,
         minimumCharge,
-        maxCountPrintPerMinCharge,
-        extraChargePerSet,
-        minChargeCutOffCount,
+        charges,
         updated_user: req.userId, // Assuming the user ID is stored in req.userId
       });
       return newPrinter.save();
@@ -80,9 +77,7 @@ exports.updatePrinter = (req, res, next) => {
     maxLength,
     maxBreadth,
     minimumCharge,
-    maxCountPrintPerMinCharge,
-    extraChargePerSet,
-    minChargeCutOffCount,
+    charges
   } = req.body;
 
   Printer.findById(printerId)
@@ -123,9 +118,7 @@ exports.updatePrinter = (req, res, next) => {
       printer.maxLength = maxLength;
       printer.maxBreadth = maxBreadth;
       printer.minimumCharge = minimumCharge;
-      printer.maxCountPrintPerMinCharge = maxCountPrintPerMinCharge;
-      printer.extraChargePerSet = extraChargePerSet;
-      printer.minChargeCutOffCount = minChargeCutOffCount;
+      printer.charges = charges;
       printer.updated_user = req.userId; 
       return printer.save();
     })

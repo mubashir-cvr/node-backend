@@ -12,10 +12,6 @@ router.post(
     body("printingMaterial").trim().not().isEmpty(),
     body("maxLength").isNumeric().not().isEmpty(),
     body("maxBreadth").isNumeric().not().isEmpty(),
-    body("minimumCharge").isNumeric().not().isEmpty(),
-    body("maxCountPrintPerMinCharge").isNumeric().not().isEmpty(),
-    body("extraChargePerSet").isNumeric().not().isEmpty(),
-    body("minChargeCutOffCount").isNumeric().not().isEmpty()
   ],
   printerController.createPrinter
 );
@@ -29,10 +25,6 @@ router.put(
     body("printingMaterial").trim().not().isEmpty(),
     body("maxLength").isNumeric().not().isEmpty(),
     body("maxBreadth").isNumeric().not().isEmpty(),
-    body("minimumCharge").isNumeric().not().isEmpty(),
-    body("maxCountPrintPerMinCharge").isNumeric().not().isEmpty(),
-    body("extraChargePerSet").isNumeric().not().isEmpty(),
-    body("minChargeCutOffCount").isNumeric().not().isEmpty()
   ],
   printerController.updatePrinter
 );
